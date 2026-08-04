@@ -3,87 +3,51 @@ import WidgetKit
 
 /// The Edit Widget form. Each placed widget carries its own scope, so you can
 /// have one per account, or one per project, side by side.
+///
+/// Both parameters are plain `String`s rather than `AppEntity`s, deliberately.
+/// An AppEntity is stored as an `EntityIdentifier`, which has to be mapped back
+/// to a registered type when the extension resolves it — and when that lookup
+/// fails it fails *silently*:
+///
+///     Failed to build EntityIdentifier. … is not a registered AppEntity identifier
+///     Prepared profile to ProfileEntity(nil)
+///
+/// The parameter simply arrives nil and the widget renders the default account,
+/// which looks exactly like the user's choice being ignored. A String is a
+/// primitive: there is no type registry involved, so there is nothing to fail.
 struct UsageConfigIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Claude Usage"
     static var description = IntentDescription(
         "Choose which Claude account to show, and optionally a single project.")
 
-    @Parameter(title: "Profile")
-    var profile: ProfileEntity?
+    /// A profile's config directory path — the same value used as `Profile.id`.
+    @Parameter(title: "Profile", optionsProvider: ProfileOptions())
+    var profile: String?
 
     /// Nil means the whole account. A project has no limit percentages of its
     /// own — Anthropic reports those per account — so a project-scoped widget
     /// shows tokens, cost and history instead of gauges.
-    @Parameter(title: "Project")
-    var project: ProjectEntity?
-}
-
-// MARK: - Profile
-
-struct ProfileEntity: AppEntity {
-    var id: String
-    var name: String
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Profile"
-    static var defaultQuery = ProfileQuery()
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(name)")
-    }
+    @Parameter(title: "Project", optionsProvider: ProjectOptions())
+    var project: String?
 }
 
 /// Runs inside the widget extension, which is sandboxed and cannot enumerate
 /// config directories — so it reads the list the host already publishes.
-struct ProfileQuery: EntityQuery {
-    /// Always resolves, even when the bundle can't be read right now.
-    ///
-    /// Returning [] here doesn't surface an error — AppIntents just treats the
-    /// parameter as unset, so the widget silently reverts to the default
-    /// account and the user's choice looks like it was ignored. The id is the
-    /// config directory path, which is enough to carry the selection on its own.
-    func entities(for identifiers: [String]) async throws -> [ProfileEntity] {
-        let known = (try? await suggestedEntities()) ?? []
-        return identifiers.map { id in
-            known.first { $0.id == id }
-                ?? ProfileEntity(id: id, name: (id as NSString).lastPathComponent)
-        }
-    }
-
-    func suggestedEntities() async throws -> [ProfileEntity] {
-        (SnapshotBundle.read()?.profileList ?? []).map {
-            ProfileEntity(id: $0.id, name: $0.displayName)
-        }
-    }
-
-    func defaultResult() async -> ProfileEntity? {
-        try? await suggestedEntities().first
+struct ProfileOptions: DynamicOptionsProvider {
+    func results() async throws -> ItemCollection<String> {
+        let profiles = SnapshotBundle.read()?.profileList ?? []
+        return ItemCollection(items: profiles.map {
+            // The value stored is the path; the label is what a person reads.
+            IntentItem<String>($0.id, title: "\($0.displayName)")
+        })
     }
 }
 
-// MARK: - Project
-
-struct ProjectEntity: AppEntity {
-    /// The project name doubles as the id — it's what transcripts attribute by,
-    /// and it is what a person recognises in the picker.
-    var id: String
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Project"
-    static var defaultQuery = ProjectQuery()
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(id)")
-    }
-}
-
-struct ProjectQuery: EntityQuery {
-    func entities(for identifiers: [String]) async throws -> [ProjectEntity] {
-        identifiers.map { ProjectEntity(id: $0) }
-    }
-
+struct ProjectOptions: DynamicOptionsProvider {
     /// Every project across every profile, busiest first. Not filtered by the
     /// chosen profile: AppIntents resolves parameters independently, and a name
-    /// that doesn't exist in the selected profile simply renders as zero.
-    func suggestedEntities() async throws -> [ProjectEntity] {
+    /// that doesn't exist in the selected account renders as zero.
+    func results() async throws -> [String] {
         guard let bundle = SnapshotBundle.read() else { return [] }
         var seen = Set<String>()
         return bundle.profileList
@@ -91,6 +55,6 @@ struct ProjectQuery: EntityQuery {
             .flatMap(\.stats.projects)
             .sorted { $0.tokens > $1.tokens }
             .filter { seen.insert($0.name).inserted }
-            .map { ProjectEntity(id: $0.name) }
+            .map(\.name)
     }
 }

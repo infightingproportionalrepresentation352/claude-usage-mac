@@ -43,8 +43,9 @@ struct UsageProvider: AppIntentTimelineProvider {
     }
 
     private func entry(for configuration: UsageConfigIntent) -> UsageEntry {
-        let wantedProfile = configuration.profile?.id
-        let wantedProject = configuration.project?.id
+        // Empty strings can come back from a cleared picker; treat them as unset.
+        let wantedProfile = configuration.profile.flatMap { $0.isEmpty ? nil : $0 }
+        let wantedProject = configuration.project.flatMap { $0.isEmpty ? nil : $0 }
 
         guard let bundle = SnapshotBundle.read() else {
             // An older host writes only state.json. Honouring that for an
