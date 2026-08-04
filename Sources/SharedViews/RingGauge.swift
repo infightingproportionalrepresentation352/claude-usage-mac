@@ -133,7 +133,6 @@ extension Snapshot {
         // Uneven, with idle days, so charts get reviewed against realistic shape
         // rather than a smooth ramp.
         let daily = [820, 0, 1_400, 2_050, 640, 0, 0, 1_180, 3_400, 2_900, 410, 1_760, 2_240, 1_240]
-        let today = Calendar.current.startOfDay(for: Date())
         stats.days = daily.enumerated().compactMap { offset, thousands in
             guard let day = Calendar.current.date(
                 byAdding: .day, value: offset - (daily.count - 1), to: today) else { return nil }
