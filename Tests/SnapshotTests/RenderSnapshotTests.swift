@@ -18,12 +18,12 @@ final class RenderSnapshotTests: XCTestCase {
         .deletingLastPathComponent()  // repo root
         .appendingPathComponent("snapshots", isDirectory: true)
 
-    override func setUpWithError() throws {
-        // Without an NSApplication, AppKit draws controls as unavailable — the
-        // menu popover's buttons come out as prohibition badges. Touching
-        // `shared` is enough to give them a real app context.
-        _ = NSApplication.shared
+    // Known limitation: ImageRenderer draws interactive controls as unavailable,
+    // so the menu popover's Refresh/Settings/Quit buttons come out as prohibition
+    // badges. Instantiating NSApplication does not change it. Everything else in
+    // these renders is faithful; the buttons need a real launch to review.
 
+    override func setUpWithError() throws {
         try FileManager.default.createDirectory(
             at: outputDirectory, withIntermediateDirectories: true)
         print("snapshots -> \(outputDirectory.path)")
