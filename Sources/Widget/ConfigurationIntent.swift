@@ -34,12 +34,17 @@ struct UsageConfigIntent: WidgetConfigurationIntent {
 /// Runs inside the widget extension, which is sandboxed and cannot enumerate
 /// config directories — so it reads the list the host already publishes.
 struct ProfileOptions: DynamicOptionsProvider {
-    func results() async throws -> ItemCollection<String> {
-        let profiles = SnapshotBundle.read()?.profileList ?? []
-        return ItemCollection(items: profiles.map {
-            // The value stored is the path; the label is what a person reads.
-            IntentItem<String>($0.id, title: "\($0.displayName)")
-        })
+    /// Config directory paths, shown verbatim.
+    ///
+    /// A String parameter's picker renders the stored value itself —
+    /// `ItemCollection` would give a separate label but requires the value type
+    /// to be `DisplayRepresentable`, which String isn't. Abbreviating to `~/…`
+    /// isn't an option either: inside the widget's sandbox, tilde expansion
+    /// resolves to the container's home rather than the user's, so the two
+    /// processes would disagree about the same folder. The full path is
+    /// unambiguous, and it is exactly `Profile.id`, so no mapping is needed.
+    func results() async throws -> [String] {
+        (SnapshotBundle.read()?.profileList ?? []).map(\.id)
     }
 }
 
