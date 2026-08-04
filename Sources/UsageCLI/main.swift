@@ -36,13 +36,15 @@ let selected: Profile? = {
     return discovered.first { $0.configDir.standardizedFileURL.path == wanted }
 }()
 
-guard let profile = selected else {
-    FileHandle.standardError.write(Data("no matching profile\n".utf8))
-    exit(1)
+// "No profile" is a real state the app renders, not a reason to bail — a
+// machine without Claude Code installed should still produce valid output.
+let snapshot: Snapshot
+if let profile = selected {
+    snapshot = await ProfileMonitor(profile: profile).snapshot(
+        force: true, label: discovered.count > 1 ? profile.displayName : nil)
+} else {
+    snapshot = Snapshot(usage: nil, error: "no-profile")
 }
-
-let snapshot = await ProfileMonitor(profile: profile).snapshot(
-    force: true, label: discovered.count > 1 ? profile.displayName : nil)
 
 if flags.contains("--write") {
     let ok = snapshot.write()
@@ -58,7 +60,11 @@ if flags.contains("--json") {
     }
 } else {
     let s = snapshot
-    print("profile: \(profile.displayName)  (\(profile.configDir.path))")
+    if let profile = selected {
+        print("profile: \(profile.displayName)  (\(profile.configDir.path))")
+    } else {
+        print("profile: none found — looked in ~/.claude and alongside it")
+    }
     if let error = s.error {
         print("error:   \(error)\(s.stale ? " (showing stale data)" : "")")
     }
@@ -70,7 +76,7 @@ if flags.contains("--json") {
     for project in s.stats.projects.prefix(5) {
         print("  \(project.name.padding(toLength: min(32, max(project.name.count, 24)), withPad: " ", startingAt: 0))  \(Format.tokens(project.tokens))")
     }
-    if !s.stats.ok {
+    if !s.stats.ok, let profile = selected {
         print("note:    \(profile.projectsDirectory.path) not readable")
     }
 }
