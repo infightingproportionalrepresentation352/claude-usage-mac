@@ -13,10 +13,14 @@ struct MenuView: View {
                 Divider().padding(.vertical, 10)
                 stats(snapshot)
 
-                Divider().padding(.vertical, 10)
-                SectionLabel(text: "LAST 14 DAYS")
-                    .padding(.bottom, 5)
-                HistoryChart(days: Array(snapshot.stats.days.suffix(14)))
+                // Hidden rather than shown empty: before the first scan there is
+                // no history, and a heading over blank space reads as broken.
+                if !snapshot.stats.days.isEmpty {
+                    Divider().padding(.vertical, 10)
+                    SectionLabel(text: "LAST 14 DAYS")
+                        .padding(.bottom, 5)
+                    HistoryChart(days: Array(snapshot.stats.days.suffix(14)))
+                }
 
                 Divider().padding(.vertical, 10)
                 SectionLabel(text: "BUSIEST PROJECTS")

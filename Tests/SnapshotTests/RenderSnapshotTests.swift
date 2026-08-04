@@ -61,21 +61,13 @@ final class RenderSnapshotTests: XCTestCase {
         ]
     }
 
+    /// Only the percentages differ from the typical case — everything else stays
+    /// populated so each state exercises the full layout.
     private static func at(session: Double, weekly: Double) -> Snapshot {
-        var stats = LogStats()
-        stats.todayTokens = 1_240_000
-        stats.todayCost = 3.40
-        stats.weekTokens = 8_430_000
-        stats.weekCost = 24.10
-        stats.sessionTokens = 341_000
-        stats.sessionCost = 1.02
-        return Snapshot(
-            usage: UsageData(
-                fiveHour: UsageNode(utilization: session,
-                                    resetsAt: Date().addingTimeInterval(2 * 3600 + 14 * 60)),
-                sevenDay: UsageNode(utilization: weekly,
-                                    resetsAt: Date().addingTimeInterval(4 * 86400 + 6 * 3600))),
-            stats: stats)
+        var snapshot = Snapshot.preview
+        snapshot.sessionPct = session
+        snapshot.weeklyPct = weekly
+        return snapshot
     }
 
     // MARK: - Tests
