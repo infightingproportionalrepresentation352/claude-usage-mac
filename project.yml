@@ -37,6 +37,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.saeedkolivand.claude-usage
         PRODUCT_NAME: Claude Usage
+        GENERATE_INFOPLIST_FILE: YES
+        # No Dock icon, no menu bar — this app is only its status item.
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_NSHumanReadableCopyright: "MIT"
         COMBINE_HIDPI_IMAGES: YES
