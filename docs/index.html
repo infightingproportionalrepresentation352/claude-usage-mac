@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Claude Usage — macOS menu bar app and widget</title>
+    <meta
+      name="description"
+      content="Claude Code session and weekly limits, tokens, and estimated cost in your macOS menu bar and as a desktop widget. Reads only what is already on your Mac."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon@2x.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Claude Usage — macOS menu bar app and widget" />
+    <meta
+      property="og:description"
+      content="Limits, tokens, and cost in the menu bar and on your desktop. Reads only what Claude Code already stores locally."
+    />
+    <meta property="og:image" content="https://claude-usage-mac.iamsaeed.dev/preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="/">
+          <img src="icon.png" alt="" width="22" height="22" />
+          Claude Usage
+        </a>
+        <span class="nav__spacer"></span>
+        <a class="nav__link nav__link--hide-sm" href="#what">Features</a>
+        <a class="nav__link nav__link--hide-sm" href="/setup">Setup guide</a>
+        <a class="nav__link nav__link--hide-sm" href="/privacy">Privacy</a>
+        <a class="nav__link" href="https://github.com/saeedkolivand/claude-usage-mac">GitHub</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="tile tile--light hero">
+        <div class="tile__inner">
+          <p class="eyebrow">macOS 14+ · menu bar &amp; widget</p>
+          <h1>Your Claude usage.<br />In the menu bar.</h1>
+          <p class="lead">
+            Session and weekly limits, token counts, and estimated cost — always
+            visible, and on your desktop as a widget. Reads only what Claude Code
+            already stores on your Mac.
+          </p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="/setup">Install</a>
+            <a class="btn btn--ghost" href="#what">What it shows</a>
+          </div>
+          <p class="hero__note">
+            Free and open source. No account, no telemetry, nothing to sign up for.
+          </p>
+        </div>
+      </section>
+
+      <section class="tile tile--dark" id="what">
+        <div class="tile__inner">
+          <div class="feature__head">
+            <p class="eyebrow">What it shows</p>
+            <h2>Two numbers that actually matter</h2>
+            <p class="lead">
+              How much of your 5-hour window is gone, and how much of the week.
+              Plus what you have spent, from Claude Code's own logs.
+            </p>
+          </div>
+          <div class="cards">
+            <div class="card">
+              <h3>Session &amp; weekly limits</h3>
+              <p>
+                Live utilisation and the time until each resets, straight from
+                Anthropic's usage endpoint using the token Claude Code already
+                stored. Colour shifts to amber then red as you approach the cap.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Tokens &amp; cost</h3>
+              <p>
+                Today, this week, and the current session, totalled from your
+                local transcripts. Cost is a best-effort estimate — notional
+                equivalent API spend on Pro and Max plans.
+              </p>
+            </div>
+            <div class="card">
+              <h3>History</h3>
+              <p>
+                A 14-day chart, kept locally so it outlives the transcripts
+                themselves — Claude Code prunes those after about a month.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Busiest projects</h3>
+              <p>
+                Which working directories your week actually went to, ranked by
+                tokens.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tile tile--parchment" id="privacy-teaser">
+        <div class="tile__inner">
+          <div class="feature__head">
+            <p class="eyebrow">Privacy</p>
+            <h2>Nothing leaves your Mac</h2>
+            <p class="lead">
+              One authenticated request to Anthropic for your own limits, and a
+              check against GitHub for new releases. That is the entire network
+              footprint — no analytics, no accounts, no third parties.
+            </p>
+          </div>
+          <div class="hero__cta">
+            <a class="btn btn--ghost" href="/privacy">Read the details</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="tile tile--dark">
+      <div class="tile__inner">
+        <p class="lead">
+          <a href="https://github.com/saeedkolivand/claude-usage-mac">Source</a> ·
+          <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">Issues</a> ·
+          <a href="https://github.com/saeedkolivand/claude-usage-mac/blob/main/LICENSE">MIT</a> ·
+          <a href="https://claude-usage.iamsaeed.dev">Stream Deck version</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
