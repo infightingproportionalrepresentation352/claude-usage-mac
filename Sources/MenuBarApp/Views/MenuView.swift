@@ -77,9 +77,7 @@ struct MenuView: View {
     // conventionally do, and it reads without a tooltip.
     private func footer(_ snapshot: Snapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Clamped: a snapshot stamped microseconds ago otherwise reads as
-            // "in 0 sec.", which looks like a bug.
-            Text("Updated \(Self.relative.localizedString(for: min(snapshot.updatedAt, Date()), relativeTo: Date()))")
+            Text(Self.updated(snapshot.updatedAt))
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
 
@@ -115,6 +113,15 @@ struct MenuView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// RelativeDateTimeFormatter renders a zero interval as "in 0 sec.", which
+    /// reads as a bug on a snapshot that was just taken. Anything inside the
+    /// poll interval is "just now" anyway.
+    static func updated(_ date: Date, now: Date = Date()) -> String {
+        let age = now.timeIntervalSince(date)
+        guard age >= 60 else { return "Updated just now" }
+        return "Updated \(relative.localizedString(for: date, relativeTo: now))"
     }
 
     private static let relative: RelativeDateTimeFormatter = {

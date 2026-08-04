@@ -16,19 +16,30 @@ for people who don't own a Stream Deck.
 Requires macOS 14 or later.
 
 ```sh
-brew install xcodegen
-./build.sh
+brew tap saeedkolivand/tap
+brew install --cask claude-usage
 ```
 
-That installs to `/Applications` and launches it. Or grab the `ClaudeUsage-app`
-artifact from a [CI run](../../actions) — it's ad-hoc signed, so Gatekeeper will
-refuse it until you clear the quarantine flag:
+Or download the DMG from [Releases](../../releases), or build from source with
+`brew install xcodegen && ./build.sh`.
+
+The widget shows up in the widget gallery once the app has run at least once.
+
+Builds are ad-hoc signed, not notarized, so macOS quarantines them. The cask
+clears that for you; if you install the DMG by hand, run:
 
 ```sh
 xattr -dr com.apple.quarantine "/Applications/Claude Usage.app"
 ```
 
-The widget shows up in the widget gallery once the app has run at least once.
+The cask is in a personal tap rather than `homebrew/cask` because that repo
+[drops casks failing Gatekeeper checks from 2026-09-01](https://github.com/orgs/Homebrew/discussions/6334),
+and `--no-quarantine` [is being removed](https://github.com/Homebrew/brew/issues/20755) —
+so the cask strips the attribute in its own `postflight`.
+
+The app checks for new releases four times a day and shows a link in the menu
+when one exists. It never downloads or installs anything by itself; `brew
+upgrade --cask claude-usage` does that.
 
 ## What it reads
 
@@ -125,6 +136,32 @@ Anthropic changes pricing.
 Scanning is incremental — per-file byte offsets, so a 60s poll re-reads only what
 was appended rather than the multiple gigabytes an active `~/.claude/projects`
 accumulates.
+
+## History and projects
+
+Daily totals are kept in `~/Library/Application Support/ClaudeUsage/history.json`.
+They have to be recorded rather than recomputed: the scanner only reads the last
+7 days of transcripts, and Claude Code prunes them after about a month. On first
+launch a one-off backfill reads the whole archive so the chart starts populated
+instead of filling in over a week.
+
+Project names come from each entry's `cwd`. The directory name under
+`~/.claude/projects` is a slug that flattens `/`, `\` and `_` all to `-`, so it
+can't be reversed into a real name.
+
+## Releasing
+
+Tag and push:
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+That builds, stamps the version, makes the DMG, publishes a release, and updates
+the cask in [saeedkolivand/homebrew-tap](https://github.com/saeedkolivand/homebrew-tap).
+The tap update needs a `TAP_TOKEN` repository secret — a fine-grained PAT with
+Contents: read/write on `homebrew-tap`. Without it the release still publishes
+and the step is skipped.
 
 ## License
 
