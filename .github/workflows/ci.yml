@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: UsageCore
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
+
+      # Proves the whole data path runs end to end on a machine with no Claude
+      # Code install: no credentials and no ~/.claude/projects. Exit 1 with
+      # "no-token" is the correct outcome here, so only a crash fails the step.
+      - name: Smoke test the CLI
+        run: |
+          set -o pipefail
+          swift run usage-cli --json | tee /tmp/snapshot.json || true
+          python3 -c "import json;json.load(open('/tmp/snapshot.json'))"
