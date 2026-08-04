@@ -5,6 +5,11 @@ struct MenuView: View {
     let isRefreshing: Bool
     var update: ReleaseInfo?
     var refresh: () -> Void = {}
+    /// False renders the informational content only. ImageRenderer draws
+    /// interactive controls as unavailable and reads the version from whatever
+    /// bundle it's hosted in, so the marketing shots would otherwise show
+    /// prohibition badges and the test runner's version number.
+    var showsActions = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -92,7 +97,9 @@ struct MenuView: View {
     // conventionally do, and it reads without a tooltip.
     private func footer(_ snapshot: Snapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("\(Self.updated(snapshot.updatedAt)) · v\(AppVersion.current)")
+            Text(showsActions
+                 ? "\(Self.updated(snapshot.updatedAt)) · v\(AppVersion.current)"
+                 : Self.updated(snapshot.updatedAt))
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
 
@@ -106,15 +113,17 @@ struct MenuView: View {
                 }
             }
 
-            HStack(spacing: 14) {
-                Button("Refresh", action: refresh)
-                    .disabled(isRefreshing)
-                SettingsLink { Text("Settings…") }
-                Spacer()
-                Button("Quit") { NSApplication.shared.terminate(nil) }
+            if showsActions {
+                HStack(spacing: 14) {
+                    Button("Refresh", action: refresh)
+                        .disabled(isRefreshing)
+                    SettingsLink { Text("Settings…") }
+                    Spacer()
+                    Button("Quit") { NSApplication.shared.terminate(nil) }
+                }
+                .buttonStyle(.link)
+                .font(.system(size: 11))
             }
-            .buttonStyle(.link)
-            .font(.system(size: 11))
         }
     }
 

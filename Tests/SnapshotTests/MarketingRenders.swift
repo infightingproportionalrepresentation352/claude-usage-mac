@@ -40,7 +40,7 @@ final class MarketingRenders: XCTestCase {
     }
 
     private var popover: some View {
-        MenuView(snapshot: .preview, isRefreshing: false)
+        MenuView(snapshot: .preview, isRefreshing: false, showsActions: false)
             .background(Color(white: 0.09))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
