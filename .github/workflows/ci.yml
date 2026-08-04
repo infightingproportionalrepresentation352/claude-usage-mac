@@ -33,3 +33,52 @@ jobs:
           set -o pipefail
           swift run usage-cli --json | tee /tmp/snapshot.json || true
           python3 -c "import json;json.load(open('/tmp/snapshot.json'))"
+
+  app:
+    name: App + Widget
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install xcodegen xcbeautify
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build app and widget
+        run: |
+          xcodebuild build \
+            -project ClaudeUsage.xcodeproj \
+            -scheme ClaudeUsage \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            CONFIGURATION_BUILD_DIR="$PWD/build" \
+            | xcbeautify --renderer github-actions || exit "${PIPESTATUS[0]}"
+
+      # The only way to actually look at the UI from a Windows dev machine.
+      - name: Render snapshots
+        run: |
+          xcodebuild test \
+            -project ClaudeUsage.xcodeproj \
+            -scheme SnapshotTests \
+            -destination 'platform=macOS' \
+            | xcbeautify --renderer github-actions || exit "${PIPESTATUS[0]}"
+
+      - name: Upload snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: snapshots/
+          if-no-files-found: error
+
+      - name: Package the app
+        run: |
+          cd build
+          zip -qry ../ClaudeUsage.zip "Claude Usage.app"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeUsage-app
+          path: ClaudeUsage.zip

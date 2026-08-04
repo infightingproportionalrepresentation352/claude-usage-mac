@@ -16,15 +16,23 @@ public struct Snapshot: Codable, Sendable, Equatable {
     /// "http-401", "network", "bad-json".
     public var error: String?
     public var stale: Bool
+    /// Carried here rather than read from UserDefaults, because the widget is
+    /// sandboxed and cannot see the app's defaults without an App Group.
+    public var warn: Double
+    public var critical: Double
 
     public init(
         updatedAt: Date = Date(),
         usage: UsageData? = nil,
         stats: LogStats = LogStats(),
         error: String? = nil,
-        stale: Bool = false
+        stale: Bool = false,
+        warn: Double = 50,
+        critical: Double = 80
     ) {
         self.updatedAt = updatedAt
+        self.warn = warn
+        self.critical = critical
         self.sessionPct = usage?.fiveHour?.utilization
         self.sessionResetsAt = usage?.fiveHour?.resetsAt
         self.weeklyPct = usage?.sevenDay?.utilization
@@ -33,6 +41,9 @@ public struct Snapshot: Codable, Sendable, Equatable {
         self.error = error
         self.stale = stale
     }
+
+    public var sessionLevel: Level { Level.of(sessionPct, warn: warn, critical: critical) }
+    public var weeklyLevel: Level { Level.of(weeklyPct, warn: warn, critical: critical) }
 }
 
 extension Snapshot {

@@ -1,0 +1,113 @@
+name: ClaudeUsage
+
+options:
+  bundleIdPrefix: com.saeedkolivand
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Ad-hoc: builds on CI with no certificate and still produces a runnable app.
+    # Real signing happens on a Mac with an identity; see build.sh.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    SWIFT_STRICT_CONCURRENCY: minimal
+
+targets:
+
+  ClaudeUsage:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/UsageCore
+      - Sources/SharedViews
+      - Sources/MenuBarApp
+    dependencies:
+      - target: ClaudeUsageWidget
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.saeedkolivand.claude-usage
+        PRODUCT_NAME: Claude Usage
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_NSHumanReadableCopyright: "MIT"
+        COMBINE_HIDPI_IMAGES: YES
+    entitlements:
+      path: Sources/MenuBarApp/ClaudeUsage.entitlements
+      properties:
+        # The host app is the one process that must read ~/.claude and the
+        # Keychain, so it is deliberately not sandboxed.
+        com.apple.security.app-sandbox: false
+        com.apple.security.application-groups:
+          - group.com.saeedkolivand.claude-usage
+
+  ClaudeUsageWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Sources/UsageCore
+      - Sources/SharedViews
+      - Sources/Widget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.saeedkolivand.claude-usage.widget
+        PRODUCT_NAME: ClaudeUsageWidget
+    info:
+      path: Sources/Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Claude Usage
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Sources/Widget/ClaudeUsageWidget.entitlements
+      properties:
+        # Default posture: unsandboxed, so the widget can read the snapshot from
+        # Application Support and no App Group provisioning is needed. If
+        # WidgetKit refuses to load it, set this to true — Snapshot.locations
+        # already writes and reads the group container as well.
+        com.apple.security.app-sandbox: false
+        com.apple.security.application-groups:
+          - group.com.saeedkolivand.claude-usage
+
+  SnapshotTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Sources/UsageCore
+      - Sources/SharedViews
+      - Sources/Widget/Views
+      - Sources/MenuBarApp/Views
+      - Tests/SnapshotTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.saeedkolivand.claude-usage.snapshots
+        # A logic test with no host app — ImageRenderer needs no running NSApp.
+        CODE_SIGNING_ALLOWED: NO
+
+schemes:
+
+  ClaudeUsage:
+    build:
+      targets:
+        ClaudeUsage: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+
+  SnapshotTests:
+    build:
+      targets:
+        SnapshotTests: [test]
+    test:
+      config: Debug
+      targets:
+        - SnapshotTests
