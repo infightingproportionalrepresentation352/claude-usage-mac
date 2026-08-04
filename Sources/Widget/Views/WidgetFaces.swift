@@ -89,14 +89,48 @@ struct UsageWidgetView: View {
                 StatRow(label: "This week", tokens: project.tokens, cost: project.cost)
             }
 
-            if face == .large, !project.days.isEmpty {
+            if face == .large {
+                share(project)
                 Spacer(minLength: 0)
-                // Seven days, not fourteen: per-project days are recomputed from
-                // the scan window rather than persisted.
-                HistoryChart(days: project.days, height: 34)
+                if !project.days.isEmpty {
+                    SectionLabel(text: "LAST 7 DAYS")
+                    // Seven, not fourteen: per-project days are recomputed from
+                    // the scan window rather than persisted like account history.
+                    HistoryChart(days: project.days, height: 56)
+                }
             } else if face != .small {
                 Spacer(minLength: 0)
             }
+        }
+    }
+
+    /// How much of the account's week went here. Only meaningful alongside the
+    /// account total, which is why it is large-only.
+    @ViewBuilder
+    private func share(_ project: ProjectUsage) -> some View {
+        if let total = snapshot?.stats.weekTokens, total > 0 {
+            let fraction = min(Double(project.tokens) / Double(total), 1)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("SHARE OF THIS WEEK")
+                        .font(.system(size: 9, weight: .semibold))
+                        .tracking(0.6)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    Text("\(Int((fraction * 100).rounded()))%")
+                        .font(.system(size: 11, weight: .medium))
+                        .monospacedDigit()
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Level.ok.tint.opacity(0.15))
+                        Capsule().fill(Level.ok.tint)
+                            .frame(width: geo.size.width * fraction)
+                    }
+                }
+                .frame(height: 5)
+            }
+            .padding(.top, 2)
         }
     }
 
