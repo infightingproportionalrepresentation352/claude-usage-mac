@@ -16,9 +16,8 @@ final class LineParsingTests: XCTestCase {
         let entry = try XCTUnwrap(TranscriptScanner.parseLine(line(assistant)))
         XCTAssertEqual(entry.id, "req_1")
         XCTAssertEqual(entry.tokens, 2 + 1648 + 42936 + 28694)
-        //  2*3 + 1648*15 + 28694*0.3 + 42936*6   (per 1e6, 1h cache write)
-        let expected = (2 * 3 + 1648 * 15 + 28694 * 0.3 + 42936 * 6) / 1e6
-        XCTAssertEqual(entry.cost, expected, accuracy: 1e-12)
+        //  (2*3 + 1648*15 + 28694*0.3 + 42936*6) / 1e6, the 1h cache write rate.
+        XCTAssertEqual(entry.cost, 0.2909502, accuracy: 1e-9)
         XCTAssertNotNil(entry.timestamp)
     }
 

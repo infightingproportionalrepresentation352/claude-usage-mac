@@ -47,19 +47,15 @@ final class PricingTests: XCTestCase {
     ]
 
     func testSonnetCostUsesTheTtlSplit() {
-        //  1000*3 + 2000*15 + 10000*0.3 + 1000*3.75 + 3000*6  (per 1e6)
-        let expected = (3_000 + 30_000 + 3_000 + 3_750 + 18_000) / 1e6
+        //  1000*3 + 2000*15 + 10000*0.3 + 1000*3.75 + 3000*6, per 1e6
         XCTAssertEqual(Pricing.cost(usage: usage, model: "claude-sonnet-5"),
-                       expected, accuracy: 1e-12)
-        XCTAssertEqual(expected, 0.05775, accuracy: 1e-12)
+                       0.05775, accuracy: 1e-12)
     }
 
     func testOpusCost() {
-        //  1000*5 + 2000*25 + 10000*0.5 + 1000*6.25 + 3000*10
-        let expected = (5_000 + 50_000 + 5_000 + 6_250 + 30_000) / 1e6
+        //  1000*5 + 2000*25 + 10000*0.5 + 1000*6.25 + 3000*10, per 1e6
         XCTAssertEqual(Pricing.cost(usage: usage, model: "claude-opus-5"),
-                       expected, accuracy: 1e-12)
-        XCTAssertEqual(expected, 0.09625, accuracy: 1e-12)
+                       0.09625, accuracy: 1e-12)
     }
 
     func testOneHourCacheWritesCostMoreThanTheFlatFallback() {
@@ -80,16 +76,17 @@ final class PricingTests: XCTestCase {
             "input_tokens": 1000,
             "cache_creation_input_tokens": 4000,
         ]
-        //  1000*3 + 4000*3.75
+        //  (1000*3 + 4000*3.75) / 1e6
         XCTAssertEqual(Pricing.cost(usage: legacy, model: "claude-sonnet-5"),
-                       (3_000 + 15_000) / 1e6, accuracy: 1e-12)
+                       0.018, accuracy: 1e-12)
     }
 
     func testMissingAndOddlyTypedFieldsCountAsZero() {
         XCTAssertEqual(Pricing.cost(usage: [:], model: "claude-sonnet-5"), 0, accuracy: 1e-12)
         // JSONSerialization hands back NSNumber; a double must not silently drop.
         let doubles: [String: Any] = ["input_tokens": 1000.0, "output_tokens": NSNumber(value: 2000)]
+        //  (1000*3 + 2000*15) / 1e6
         XCTAssertEqual(Pricing.cost(usage: doubles, model: "claude-sonnet-5"),
-                       (3_000 + 30_000) / 1e6, accuracy: 1e-12)
+                       0.033, accuracy: 1e-12)
     }
 }
