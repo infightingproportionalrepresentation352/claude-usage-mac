@@ -21,6 +21,9 @@ jobs:
       TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history so the notes can diff against the previous tag.
+          fetch-depth: 0
 
       - name: Resolve version
         id: version
@@ -108,6 +111,16 @@ jobs:
           xattr -dr com.apple.quarantine "/Applications/Claude Usage.app"
           ```
           EOF
+
+          # Built here rather than with --generate-notes so the install
+          # instructions stay at the top, where they're actually useful.
+          TAG="${{ steps.version.outputs.tag }}"
+          PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+          if [ -n "$PREV" ]; then
+            { echo; echo "### Changes since ${PREV}"; echo;
+              git log --pretty='- %s' "${PREV}..${TAG}"; } >> notes.md
+          fi
+
           gh release create "${{ steps.version.outputs.tag }}" \
             --title "${{ steps.version.outputs.tag }}" \
             --notes-file notes.md \
