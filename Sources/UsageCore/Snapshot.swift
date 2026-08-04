@@ -85,10 +85,21 @@ extension Snapshot {
     static var widgetContainer: URL? {
         // Inside a sandbox this would resolve to a nested path that doesn't
         // exist; harmless, because only the unsandboxed host ever writes.
-        FileManager.default.homeDirectoryForCurrentUser
+        let data = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Containers", isDirectory: true)
             .appendingPathComponent(widgetBundleID, isDirectory: true)
-            .appendingPathComponent("Data/Library/Application Support", isDirectory: true)
+            .appendingPathComponent("Data", isDirectory: true)
+
+        // Only write into a container macOS has already created. Materializing
+        // one ourselves would leave it without its container metadata, which can
+        // stop the extension launching at all — worse than having no data yet.
+        // It appears the first time the widget runs; the next poll fills it.
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: data.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else { return nil }
+
+        return data
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
             .appendingPathComponent(relativePath)
     }
 

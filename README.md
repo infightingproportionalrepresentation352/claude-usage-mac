@@ -84,12 +84,23 @@ is built by Xcode via XcodeGen, since SPM can't express an app that embeds an
 extension. Both build systems compile `Sources/UsageCore` directly — there's no
 framework target to embed and sign.
 
-The snapshot file is written to **both** the App Group container and Application
-Support, and read back from whichever is fresher. App Groups are a
-provisioning-profile capability that may need a paid developer account;
-Application Support always works but only for a non-sandboxed widget. Writing
-both means the sandbox posture is one entitlement flip in `project.yml`, with no
-code change.
+Getting that snapshot to the widget is the fiddly part, and worth writing down:
+
+- **The widget extension must be sandboxed.** macOS never registers an
+  unsandboxed app extension, so it silently never appears in the widget gallery.
+  That rules out reading `~/.claude` from the widget.
+- **App Groups are the textbook answer and don't work here.** They're a
+  provisioning-profile capability, so with ad-hoc signing and no team
+  `containerURL(forSecurityApplicationGroupIdentifier:)` returns nil.
+- **The host app isn't sandboxed**, so it writes directly into the widget's own
+  container at `~/Library/Containers/…widget/Data/Library/Application Support/`.
+  Inside the sandbox the widget reads exactly that as its Application Support —
+  no entitlement, no App Group, no paid account.
+
+The host only writes there once macOS has created the container; materializing
+one by hand leaves it without its container metadata, which can stop the
+extension launching at all. So a freshly added widget shows a placeholder until
+the next poll, at most 60 seconds.
 
 ## Developing without a Mac
 
@@ -106,12 +117,12 @@ makes visual iteration a normal part of the loop instead of a blocker.
 
 ### Unverified
 
-What the snapshot loop cannot prove, and needs one pass on real hardware:
+What the snapshot loop cannot prove, and needs a pass on real hardware:
 
-- The widget loads and appears in the widget gallery. This is the real risk —
-  the widget extension ships **unsandboxed**, and if WidgetKit refuses to load
-  it, set `com.apple.security.app-sandbox: true` for `ClaudeUsageWidget` in
-  `project.yml` and the App Group path takes over.
+- The widget loads and appears in the widget gallery. It didn't at first — the
+  extension shipped unsandboxed and macOS never registered it. `build.sh` now
+  reports registration; if it says nothing is registered, `killall chronod`
+  forces a rescan.
 - The Keychain consent prompt behaves, and the token actually reads.
 - "Open at login" sticks — `SMAppService` needs a properly signed app.
 - The popover's Refresh / Settings / Quit buttons. `ImageRenderer` draws
