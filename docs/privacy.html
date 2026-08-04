@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — Claude Usage for macOS</title>
+    <meta
+      name="description"
+      content="Claude Usage reads local files and makes two network requests: your own usage limits, and a check for new releases. No analytics, no accounts, no third parties."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon@2x.png" />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="/">
+          <img src="icon.png" alt="" width="22" height="22" />
+          Claude Usage
+        </a>
+        <span class="nav__spacer"></span>
+        <a class="nav__link nav__link--hide-sm" href="/#what">Features</a>
+        <a class="nav__link nav__link--hide-sm" href="/setup">Setup guide</a>
+        <a class="nav__link nav__link--hide-sm" href="/privacy">Privacy</a>
+        <a class="nav__link" href="https://github.com/saeedkolivand/claude-usage-mac">GitHub</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="tile tile--light">
+        <div class="tile__inner prose">
+          <h1>Privacy Policy</h1>
+          <p><em>Last updated: 4 August 2026</em></p>
+
+          <h2>Summary</h2>
+          <p>
+            Claude Usage runs entirely on your Mac. It reads files Claude Code
+            has already written, and makes exactly two kinds of network request:
+            one authenticated call to Anthropic for <em>your own</em> usage
+            limits, and an unauthenticated check to GitHub for a newer release.
+            There is no analytics, no account, no server of ours, and no third
+            party involved.
+          </p>
+
+          <h2>What it accesses, locally on your device</h2>
+          <ul>
+            <li>
+              <strong>Your Claude credential token.</strong> To read your live
+              usage limits, the app reads the access token Claude Code already
+              stores: the login Keychain item
+              <code>Claude Code-credentials</code>, or
+              <code>.credentials.json</code> inside a config folder. macOS asks
+              your permission the first time. The token is used only as the
+              bearer credential on the request below; it is never copied, logged,
+              or written anywhere.
+            </li>
+            <li>
+              <strong>Your local Claude Code transcripts.</strong> For token
+              counts and cost, the app reads the JSONL conversation logs under
+              <code>&lt;config folder&gt;/projects/</code>. It parses them
+              read-only and keeps only totals — token counts, computed cost, the
+              request ids it uses to avoid double-counting, and each entry's
+              working directory, which is where project names come from. Message
+              content is never read into anything it keeps.
+            </li>
+            <li>
+              <strong>Which config folders exist.</strong> To offer a profile per
+              widget, it lists <code>~/.claude</code> and folders beside it whose
+              names begin with <code>.claude</code>, treating any that contains a
+              <code>projects</code> directory as an account. For each it reads
+              the account email, organization name and plan tier from that
+              folder's <code>.claude.json</code>, purely to label the picker.
+            </li>
+            <li>
+              <strong>Your settings.</strong> Thresholds, the selected profile,
+              and the optional User-Agent are stored in the app's own preferences
+              on your Mac.
+            </li>
+          </ul>
+
+          <h2>What it transmits</h2>
+          <ul>
+            <li>
+              <strong>One authenticated GET to Anthropic.</strong> To
+              <code>api.anthropic.com/api/oauth/usage</code>, about once a
+              minute, carrying your Claude token so Anthropic can tell you your
+              own limits. Nothing about your transcripts, projects, machine or
+              settings is included. Anthropic's handling of that request is
+              covered by
+              <a href="https://www.anthropic.com/legal/privacy">their privacy policy</a>.
+            </li>
+            <li>
+              <strong>One unauthenticated GET to GitHub.</strong> To
+              <code>api.github.com</code>, four times a day, to ask for this
+              project's latest release tag. It carries no token, no account, and
+              no identifier — just the request itself, which necessarily reveals
+              your IP address to GitHub as any web request would. You can switch
+              it off in Settings under <strong>Updates</strong>.
+            </li>
+          </ul>
+          <p>
+            That is the complete list. There is no telemetry, no crash
+            reporting, and no analytics of any kind.
+          </p>
+
+          <h2>What it stores</h2>
+          <ul>
+            <li>
+              <strong>Daily usage totals</strong>, in
+              <code>~/Library/Application Support/ClaudeUsage/history.json</code>.
+              Just a date, a token count and a cost per day, kept so your chart
+              outlives the transcripts themselves — Claude Code prunes those
+              after about a month. One file per profile.
+            </li>
+            <li>
+              <strong>A snapshot of the current figures</strong>, written where
+              the widget can read it. This is the same numbers you see on screen.
+            </li>
+            <li>
+              <strong>Your settings</strong>, in the app's preferences.
+            </li>
+          </ul>
+          <p>
+            All of it stays on your Mac. Deleting the app and the
+            <code>ClaudeUsage</code> folder in Application Support removes
+            everything it ever wrote — or run
+            <code>brew uninstall --zap --cask claude-usage</code>.
+          </p>
+
+          <h2>Data sharing</h2>
+          <p>
+            None. Nothing is sold, shared, or sent to us — we do not operate a
+            server and could not receive your data if we wanted to.
+          </p>
+
+          <h2>Children</h2>
+          <p>
+            The app is a developer tool and is not directed at children under 13.
+            It collects nothing from anyone.
+          </p>
+
+          <h2>Changes to this policy</h2>
+          <p>
+            Any change will be published here and noted in the release notes. The
+            source is public, so the behaviour described above can be verified
+            rather than taken on trust.
+          </p>
+
+          <h2>Contact</h2>
+          <p>
+            Questions or concerns:
+            <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">open an issue</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="tile tile--dark">
+      <div class="tile__inner">
+        <p class="lead">
+          <a href="https://github.com/saeedkolivand/claude-usage-mac">Source</a> ·
+          <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">Issues</a> ·
+          <a href="/setup">Setup guide</a> ·
+          <a href="https://claude-usage.iamsaeed.dev">Stream Deck version</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

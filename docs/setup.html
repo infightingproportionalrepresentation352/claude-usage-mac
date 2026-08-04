@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Setup guide — Claude Usage for macOS</title>
+    <meta
+      name="description"
+      content="Install Claude Usage, add the widget, and configure profiles, thresholds and updates."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon@2x.png" />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="/">
+          <img src="icon.png" alt="" width="22" height="22" />
+          Claude Usage
+        </a>
+        <span class="nav__spacer"></span>
+        <a class="nav__link nav__link--hide-sm" href="/#what">Features</a>
+        <a class="nav__link nav__link--hide-sm" href="/setup">Setup guide</a>
+        <a class="nav__link nav__link--hide-sm" href="/privacy">Privacy</a>
+        <a class="nav__link" href="https://github.com/saeedkolivand/claude-usage-mac">GitHub</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="tile tile--light">
+        <div class="tile__inner prose">
+          <h1>Setup guide</h1>
+
+          <h2>Before you start</h2>
+          <p>
+            You need <strong>macOS 14 or later</strong> and a working
+            <a href="https://claude.com/claude-code">Claude Code</a> install that
+            you have signed into at least once. Claude Usage reads only what
+            Claude Code already stores on your Mac — it has no account of its own
+            and nothing to sign up for.
+          </p>
+
+          <h2>Install</h2>
+          <p>With Homebrew:</p>
+          <pre><code>brew tap saeedkolivand/tap
+brew trust --cask saeedkolivand/tap/claude-usage
+brew install --cask claude-usage</code></pre>
+          <p>
+            The <code>trust</code> step is not optional. Since Homebrew 6.0,
+            third-party taps must be trusted explicitly before Homebrew will
+            evaluate their code — a response to a real incident where a
+            compromised tap was used to ship malware. Trusting one cask by name
+            is the narrowest scope; <code>brew trust saeedkolivand/tap</code>
+            would cover everything in the tap, now and in future.
+          </p>
+          <p>
+            Prefer a download? Grab the <code>.dmg</code> from
+            <a href="https://github.com/saeedkolivand/claude-usage-mac/releases">Releases</a>
+            and drag the app to Applications. Builds are ad-hoc signed rather
+            than notarized, so macOS quarantines them and will call the app
+            damaged on first launch. The cask clears that for you; after a manual
+            install, run:
+          </p>
+          <pre><code>xattr -dr com.apple.quarantine "/Applications/Claude Usage.app"</code></pre>
+
+          <h2>First launch</h2>
+          <p>
+            Claude Usage has no Dock icon — it lives in the menu bar. On first
+            run two things happen:
+          </p>
+          <ul>
+            <li>
+              <strong>macOS asks for Keychain access.</strong> Claude Code keeps
+              its access token in the login Keychain, and reading it from another
+              app needs your say-so. Choose <strong>Always Allow</strong> so it
+              stops asking. Decline and the limit gauges show
+              <code>--</code>; tokens and cost still work, since those come from
+              transcripts on disk.
+            </li>
+            <li>
+              <strong>History backfills once.</strong> The app reads your whole
+              transcript archive to seed the 14-day chart, which can take a few
+              seconds on a busy machine. It happens once, in the background.
+            </li>
+          </ul>
+
+          <h2>Add the widget</h2>
+          <p>
+            Right-click the desktop, choose <strong>Edit Widgets</strong>, find
+            <strong>Claude Usage</strong>, and drag out the size you want. The
+            app must have run at least once for the widget to appear.
+          </p>
+          <p>
+            A freshly placed widget shows a placeholder for up to a minute. That
+            is expected: macOS creates the widget's sandbox container the first
+            time it runs, and the app fills it on the next poll.
+          </p>
+          <p>
+            Not showing up at all? Run <code>killall chronod</code> to make macOS
+            rescan its widget extensions.
+          </p>
+
+          <h2>Configure a widget</h2>
+          <p>
+            Right-click any placed widget and choose <strong>Edit Widget</strong>.
+            Each one is configured separately, so you can place several with
+            different scopes.
+          </p>
+
+          <h3>Profile</h3>
+          <p>
+            Which Claude account this widget shows. Most people have one and can
+            ignore this.
+          </p>
+
+          <h3>Project</h3>
+          <p>
+            Leave it empty for the whole account. Pick a project and the widget
+            narrows to that working directory: today's tokens and cost, its share
+            of the week, and a 7-day chart.
+          </p>
+          <p>
+            A project-scoped widget has <strong>no limit gauges</strong>, and
+            that is deliberate rather than missing. The 5-hour and weekly
+            percentages are reported per account, so there is no such thing as a
+            single project's limit.
+          </p>
+
+          <h2>Settings</h2>
+          <p>Open them from the menu bar popover.</p>
+
+          <h3>Profile</h3>
+          <p>
+            Which account the menu bar itself shows. A profile is a Claude Code
+            config folder — one logged-in account. Relocating that folder with
+            <code>CLAUDE_CONFIG_DIR</code> is the only way Claude Code supports
+            more than one, so that is what the list looks for:
+            <code>~/.claude</code>, anything beside it whose name starts with
+            <code>.claude</code>, and folders you add with
+            <strong>Add Folder…</strong>. A folder counts when it contains a
+            <code>projects</code> directory.
+          </p>
+          <p>
+            <strong>One caveat on macOS.</strong> Claude Code stores its token in
+            the login Keychain under a single name, with no per-account variant,
+            so only your default profile can read a token from there. A second
+            profile needs its own <code>.credentials.json</code> inside its
+            config folder. Without one it reports <em>no token</em> rather than
+            borrowing the default account's token and showing you the wrong
+            percentages. Tokens and cost still work either way.
+          </p>
+
+          <h3>Menu bar shows</h3>
+          <p>
+            Whether the number in the menu bar is the 5-hour window or the
+            weekly one. Past your red threshold it gains a
+            <code>!</code> prefix — menu bar items are drawn as template images,
+            so colour would be stripped and a symbol is the only signal that
+            survives.
+          </p>
+
+          <h3>Amber and Red thresholds</h3>
+          <p>
+            Where the gauges change colour, defaulting to 50% and 80%. They also
+            travel to the widgets, so everything agrees.
+          </p>
+
+          <h3>Open at login</h3>
+          <p>
+            Registers the app as a login item. This needs a properly signed
+            build; on an ad-hoc one the toggle reports the error rather than
+            silently flipping back.
+          </p>
+
+          <h3>Updates</h3>
+          <p>
+            Shows the running version and whether a newer release exists,
+            checking GitHub four times a day. <strong>Check Now</strong> forces
+            one. Nothing is ever downloaded or installed for you — update with
+            <code>brew upgrade --cask claude-usage</code>, or the link to the
+            release notes.
+          </p>
+
+          <h3>User-Agent (Advanced)</h3>
+          <p>
+            Sent to the usage endpoint. It must begin with
+            <code>claude-code/</code> or the API serves a heavily rate-limited
+            bucket. Only worth touching if the version string ever goes stale.
+          </p>
+
+          <h2>If something looks wrong</h2>
+
+          <h3>"Sign in with Claude Code"</h3>
+          <p>
+            No usable token. Run <code>claude</code> once and sign in. If you use
+            a non-default profile, check it has its own
+            <code>.credentials.json</code> — see the profile caveat above.
+          </p>
+
+          <h3>"No connection", or numbers marked outdated</h3>
+          <p>
+            The usage endpoint didn't answer. The app keeps showing the last good
+            figures and labels them outdated rather than blanking the display. It
+            retries on its own; <strong>Refresh</strong> forces one immediately.
+          </p>
+
+          <h3>"No Claude Code data found"</h3>
+          <p>
+            No config folder with a <code>projects</code> directory was found. If
+            yours lives somewhere unusual, add it with
+            <strong>Add Folder…</strong> in Settings.
+          </p>
+
+          <h3>Tokens and cost look low</h3>
+          <p>
+            Cost is computed from token counts in your local transcripts, so it
+            only covers what Claude Code wrote to disk. On Pro and Max plans it
+            is notional equivalent API spend, not money you were charged.
+          </p>
+
+          <h2>Still stuck?</h2>
+          <p>
+            Open an issue on
+            <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">GitHub</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="tile tile--dark">
+      <div class="tile__inner">
+        <p class="lead">
+          <a href="https://github.com/saeedkolivand/claude-usage-mac">Source</a> ·
+          <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">Issues</a> ·
+          <a href="/privacy">Privacy</a> ·
+          <a href="https://claude-usage.iamsaeed.dev">Stream Deck version</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

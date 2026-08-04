@@ -1,12 +1,20 @@
 # claude-usage-mac
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Platform](https://img.shields.io/badge/macOS-14%2B-black.svg)
+![Swift](https://img.shields.io/badge/built%20with-Swift%205.9-f05138.svg)
+[![Homebrew](https://img.shields.io/badge/Homebrew-saeedkolivand%2Ftap-d97757.svg)](https://github.com/saeedkolivand/homebrew-tap)
+[![Site](https://img.shields.io/badge/site-claude--usage--mac.iamsaeed.dev-38bdf8.svg)](https://claude-usage-mac.iamsaeed.dev)
+
 Claude Code usage in the macOS menu bar and as a desktop widget — session and
-weekly limit percentages, plus token counts and estimated cost.
+weekly limit percentages, token counts, and estimated cost.
 
 A native port of [claude-usage-streamdeck-plugin](https://github.com/saeedkolivand/claude-usage-streamdeck-plugin)
 for people who don't own a Stream Deck.
 
-> **Status: built, not yet run on real hardware.** Everything compiles, 43 tests
+![Claude Usage: the menu bar popover beside the medium and small widgets](docs/gallery/hero.png)
+
+> **Status: built, not yet run on real hardware.** Everything compiles, tests
 > pass, and the UI is reviewed through rendered snapshots — but the project is
 > developed on Windows, so nobody has launched it on a Mac yet. See
 > [Unverified](#unverified) before trusting it.
@@ -41,12 +49,21 @@ xattr -dr com.apple.quarantine "/Applications/Claude Usage.app"
 
 The cask is in a personal tap rather than `homebrew/cask` because that repo
 [drops casks failing Gatekeeper checks from 2026-09-01](https://github.com/orgs/Homebrew/discussions/6334),
-and `--no-quarantine` [is being removed](https://github.com/Homebrew/brew/issues/20755) —
-so the cask strips the attribute in its own `postflight`.
+and `--no-quarantine` [is being removed](https://github.com/Homebrew/brew/issues/20755).
 
-The app checks for new releases four times a day and shows a link in the menu
-when one exists. It never downloads or installs anything by itself; `brew
-upgrade --cask claude-usage` does that.
+## Gallery
+
+| | |
+|---|---|
+| ![Small widget](docs/gallery/widget-small.png) | ![Medium widget](docs/gallery/widget-medium.png) |
+| **Small** — the 5-hour window, and when it resets. | **Medium** — both limits, plus today and this week. |
+| ![Large widget](docs/gallery/widget-large.png) | ![Project-scoped widget](docs/gallery/widget-project.png) |
+| **Large** — adds a 14-day chart. | **Project-scoped** — one directory's tokens and cost. No gauges: limits are account-level. |
+
+![The menu bar popover](docs/gallery/menu.png)
+
+Every widget carries its own configuration, so you can place one per account or
+one per project, side by side.
 
 ## What it reads
 
@@ -58,33 +75,48 @@ Two sources, both already on your machine. Nothing is sent anywhere.
 | `~/.claude/projects/**/*.jsonl` | today / this week / current session token counts and estimated cost |
 
 The token is read from the login Keychain (`Claude Code-credentials`), falling
-back to `~/.claude/.credentials.json`. We never log in, never write credentials,
-and never transmit anything except the one authenticated GET above.
+back to `<config dir>/.credentials.json`. We never log in, never write
+credentials, and never transmit anything except the one authenticated GET above.
 
 macOS asks once for permission to read that Keychain item. "Always Allow" stops
 it asking again.
 
-## Architecture
+## Profiles
 
-A widget extension is sandboxed: it can't read `~/.claude`, can't reach the
-Keychain, and has no timer. So it never fetches anything — the menu bar app
-polls every 60s and writes a small snapshot file that the widget renders.
+A profile is a Claude Code config folder — one logged-in account. Relocating it
+with `CLAUDE_CONFIG_DIR` is the only way Claude Code supports more than one, so
+that's what discovery looks for: `~/.claude`, anything beside it whose name
+starts with `.claude`, and folders you add in Settings. A folder counts when it
+contains a `projects` directory.
+
+Pick the menu bar's profile in Settings; each widget picks its own. Every
+profile keeps its own cache and its own history file, so one account can never
+show another's numbers.
+
+**macOS caveat.** Claude Code keeps its token in the login Keychain under a
+single name with no per-account variant, so only the default profile can read a
+token from there. A second profile needs its own `.credentials.json` in its
+config folder. Without one it reports `no-token` — deliberately, rather than
+borrowing the default account's token and showing the wrong percentages. Tokens
+and cost still work either way, since those come from transcripts on disk.
+
+## Architecture
 
 ```
 Sources/
   UsageCore/     data layer, no UI — shared by the app, the widget, and the CLI
   SharedViews/   the ring gauge and palette, shared by the app and the widget
   MenuBarApp/    MenuBarExtra, the 60s poller, settings
-  Widget/        TimelineProvider and the three widget families
+  Widget/        AppIntent configuration and the widget families
   UsageCLI/      prints the snapshot; the CI smoke test
 ```
 
-`swift test` covers `UsageCore` with no Xcode involved. The app and widget bundle
-is built by Xcode via XcodeGen, since SPM can't express an app that embeds an
-extension. Both build systems compile `Sources/UsageCore` directly — there's no
-framework target to embed and sign.
+`swift test` covers `UsageCore` with no Xcode involved. The app and widget
+bundle is built by Xcode via XcodeGen, since SPM can't express an app that
+embeds an extension. Both build systems compile `Sources/UsageCore` directly —
+there's no framework target to embed and sign.
 
-Getting that snapshot to the widget is the fiddly part, and worth writing down:
+Getting data to the widget is the fiddly part, and worth writing down:
 
 - **The widget extension must be sandboxed.** macOS never registers an
   unsandboxed app extension, so it silently never appears in the widget gallery.
@@ -110,10 +142,10 @@ Swift doesn't build on Windows, so CI is the compiler and the display:
 gh run download <run-id> -n snapshots -D snapshots
 ```
 
-`Tests/SnapshotTests` renders every view — three widget families, the menu
-popover, settings — across light and dark and eight data states (typical, warn,
-critical, overflow, no-token, stale, no-data), and CI uploads the 66 PNGs. That
-makes visual iteration a normal part of the loop instead of a blocker.
+`Tests/SnapshotTests` renders every view — widget families, project scope, the
+menu popover — across light and dark and every data state, and CI uploads the
+PNGs. The gallery images above come from the same pipeline, so they can't drift
+from the UI; they *are* the UI, with a backdrop and a shadow.
 
 ### Unverified
 
@@ -137,26 +169,28 @@ What the snapshot loop cannot prove, and needs a pass on real hardware:
 Runs on any Mac with a Swift toolchain, no Xcode project needed:
 
 ```sh
-swift run usage-cli           # human-readable summary
-swift run usage-cli --json    # exactly what the widget will render
-swift run usage-cli --write   # write the snapshot file to disk
+swift run usage-cli              # human-readable summary
+swift run usage-cli --profiles   # list discovered profiles
+swift run usage-cli --json       # exactly what the widget will render
+swift run usage-cli --write      # write the snapshot files to disk
 ```
 
 ## Cost accuracy
 
 Costs are computed from token counts, because current Claude Code transcripts no
-longer record a `costUSD` field. Cache writes are billed by TTL — 1.25x input for
-the 5-minute cache and 2x for the 1-hour cache — and Claude Code writes almost
-exclusively 1-hour entries. Collapsing both into the 5-minute rate (which the
-Stream Deck plugin does) understates the real figure substantially.
+longer record a `costUSD` field. Cache writes are billed by TTL — 1.25x input
+for the 5-minute cache and 2x for the 1-hour cache — and Claude Code writes
+almost exclusively 1-hour entries. Collapsing both into the 5-minute rate (which
+the Stream Deck plugin did before v1.7) understates the real figure
+substantially.
 
 On Pro/Max plans this is notional equivalent API spend, not money you were
 charged. Rates live in `Sources/UsageCore/Pricing.swift`; edit them when
 Anthropic changes pricing.
 
-Scanning is incremental — per-file byte offsets, so a 60s poll re-reads only what
-was appended rather than the multiple gigabytes an active `~/.claude/projects`
-accumulates.
+Scanning is incremental — per-file byte offsets, so a 60s poll re-reads only
+what was appended rather than the multiple gigabytes an active
+`~/.claude/projects` accumulates.
 
 ## History and projects
 
@@ -172,10 +206,8 @@ can't be reversed into a real name.
 
 ## Releasing
 
-Tag and push:
-
 ```sh
-git tag v0.2.0 && git push origin v0.2.0
+git tag v0.3.0 && git push origin v0.3.0
 ```
 
 That builds, stamps the version, makes the DMG, publishes a release, and updates
