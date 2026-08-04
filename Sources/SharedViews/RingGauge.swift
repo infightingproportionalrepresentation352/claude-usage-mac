@@ -17,14 +17,18 @@ struct RingGauge: View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
             ZStack {
+                // Strokes straddle the path, so without this inset the outer half
+                // spills past the frame and gets clipped by the container.
                 Circle()
                     .stroke(level.tint.opacity(0.18), lineWidth: lineWidth)
+                    .padding(lineWidth / 2)
                 if pct != nil {
                     Circle()
                         .trim(from: 0, to: fraction)
                         .stroke(level.tint,
                                 style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                         .rotationEffect(.degrees(-90))
+                        .padding(lineWidth / 2)
                 }
                 if showsPercent {
                     Text(Format.percent(pct))

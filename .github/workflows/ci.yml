@@ -48,22 +48,24 @@ jobs:
 
       - name: Build app and widget
         run: |
+          set -o pipefail
           xcodebuild build \
             -project ClaudeUsage.xcodeproj \
             -scheme ClaudeUsage \
             -configuration Release \
             -destination 'platform=macOS' \
-            CONFIGURATION_BUILD_DIR="$PWD/build" \
-            | xcbeautify --renderer github-actions || exit "${PIPESTATUS[0]}"
+            -derivedDataPath dd \
+            | xcbeautify --renderer github-actions
 
       # The only way to actually look at the UI from a Windows dev machine.
       - name: Render snapshots
         run: |
+          set -o pipefail
           xcodebuild test \
             -project ClaudeUsage.xcodeproj \
             -scheme SnapshotTests \
             -destination 'platform=macOS' \
-            | xcbeautify --renderer github-actions || exit "${PIPESTATUS[0]}"
+            | xcbeautify --renderer github-actions
 
       - name: Upload snapshots
         if: always()
@@ -75,8 +77,17 @@ jobs:
 
       - name: Package the app
         run: |
-          cd build
-          zip -qry ../ClaudeUsage.zip "Claude Usage.app"
+          set -euo pipefail
+          APP="dd/Build/Products/Release/Claude Usage.app"
+
+          # Without a Mac to check on, this is the only confirmation that the
+          # extension actually embedded and that both entitlements applied.
+          test -d "$APP/Contents/PlugIns/ClaudeUsageWidget.appex" \
+            || { echo "widget did not embed"; ls -R "$APP/Contents"; exit 1; }
+          codesign -dv --entitlements - "$APP" 2>&1 | tail -20
+          codesign -dv --entitlements - "$APP/Contents/PlugIns/ClaudeUsageWidget.appex" 2>&1 | tail -20
+
+          ditto -c -k --keepParent "$APP" ClaudeUsage.zip
 
       - uses: actions/upload-artifact@v4
         with:

@@ -61,32 +61,23 @@ struct MenuView: View {
         .font(.system(size: 10))
     }
 
+    // ponytail: text buttons, not an icon row — it's what menu bar apps
+    // conventionally do, and it reads without a tooltip.
     private func footer(_ snapshot: Snapshot) -> some View {
-        HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Updated \(Self.relative.localizedString(for: snapshot.updatedAt, relativeTo: Date()))")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
-            Spacer()
-            Button(action: refresh) {
-                Image(systemName: "arrow.clockwise")
-            }
-            .buttonStyle(.borderless)
-            .disabled(isRefreshing)
-            .help("Refresh now")
 
-            SettingsLink {
-                Image(systemName: "gearshape")
+            HStack(spacing: 14) {
+                Button("Refresh", action: refresh)
+                    .disabled(isRefreshing)
+                SettingsLink { Text("Settings…") }
+                Spacer()
+                Button("Quit") { NSApplication.shared.terminate(nil) }
             }
-            .buttonStyle(.borderless)
-            .help("Settings")
-
-            Button {
-                NSApplication.shared.terminate(nil)
-            } label: {
-                Image(systemName: "power")
-            }
-            .buttonStyle(.borderless)
-            .help("Quit")
+            .buttonStyle(.link)
+            .font(.system(size: 11))
         }
     }
 
