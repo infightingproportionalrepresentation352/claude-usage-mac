@@ -75,6 +75,16 @@ jobs:
           path: snapshots/
           if-no-files-found: error
 
+      # The README and landing-page images, rendered from the same views. Pulled
+      # down and committed when they change.
+      - name: Upload gallery
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery
+          path: docs/gallery/
+          if-no-files-found: error
+
       - name: Package the app
         run: |
           set -euo pipefail
