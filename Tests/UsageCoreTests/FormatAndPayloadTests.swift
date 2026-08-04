@@ -106,7 +106,11 @@ final class SnapshotTests: XCTestCase {
         var stats = LogStats()
         stats.todayTokens = 123
         stats.todayCost = 4.56
+        // Whole seconds on purpose: .iso8601 drops fractional seconds, which is
+        // fine in practice (freshness is compared at second scale) but would
+        // make an exact round-trip assertion flaky.
         let original = Snapshot(
+            updatedAt: Date(timeIntervalSince1970: 1_770_000_000),
             usage: UsageData(
                 fiveHour: UsageNode(utilization: 42, resetsAt: Date(timeIntervalSince1970: 1_770_000_000)),
                 sevenDay: UsageNode(utilization: 18, resetsAt: nil)),
