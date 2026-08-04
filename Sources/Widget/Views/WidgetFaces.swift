@@ -71,12 +71,14 @@ struct UsageWidgetView: View {
     }
 
     private func large(_ snapshot: Snapshot) -> some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 16) {
+            // Expands to whatever is left after the stats, so the rings grow to
+            // fill the family rather than leaving dead space above and below.
             HStack(spacing: 26) {
                 MetricGauge(snapshot: snapshot, metric: .session, lineWidth: 12)
                 MetricGauge(snapshot: snapshot, metric: .weekly, lineWidth: 12)
             }
-            .frame(maxHeight: 150)
+            .frame(maxHeight: .infinity)
 
             VStack(spacing: 9) {
                 StatRow(label: "Today", tokens: snapshot.stats.todayTokens,

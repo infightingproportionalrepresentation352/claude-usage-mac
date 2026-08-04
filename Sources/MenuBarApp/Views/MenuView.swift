@@ -65,7 +65,9 @@ struct MenuView: View {
     // conventionally do, and it reads without a tooltip.
     private func footer(_ snapshot: Snapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Updated \(Self.relative.localizedString(for: snapshot.updatedAt, relativeTo: Date()))")
+            // Clamped: a snapshot stamped microseconds ago otherwise reads as
+            // "in 0 sec.", which looks like a bug.
+            Text("Updated \(Self.relative.localizedString(for: min(snapshot.updatedAt, Date()), relativeTo: Date()))")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
 

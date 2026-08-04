@@ -19,6 +19,11 @@ final class RenderSnapshotTests: XCTestCase {
         .appendingPathComponent("snapshots", isDirectory: true)
 
     override func setUpWithError() throws {
+        // Without an NSApplication, AppKit draws controls as unavailable — the
+        // menu popover's buttons come out as prohibition badges. Touching
+        // `shared` is enough to give them a real app context.
+        _ = NSApplication.shared
+
         try FileManager.default.createDirectory(
             at: outputDirectory, withIntermediateDirectories: true)
         print("snapshots -> \(outputDirectory.path)")
