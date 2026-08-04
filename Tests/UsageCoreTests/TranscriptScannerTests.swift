@@ -25,10 +25,10 @@ final class TranscriptScannerTests: XCTestCase {
 
     /// One assistant line whose only usage is `output_tokens`, so tokens == output
     /// and cost == output * sonnet output rate. Keeps the assertions readable.
-    private func line(_ id: String, at date: Date, output: Int) -> String {
+    private func line(_ id: String, at date: Date, output: Int, cwd: String = "/code/demo") -> String {
         """
         {"type":"assistant","requestId":"\(id)","timestamp":"\(Self.iso.string(from: date))",\
-        "message":{"id":"msg_\(id)","model":"claude-sonnet-5",\
+        "cwd":"\(cwd)","message":{"id":"msg_\(id)","model":"claude-sonnet-5",\
         "usage":{"output_tokens":\(output)}}}
         """
     }
@@ -47,7 +47,13 @@ final class TranscriptScannerTests: XCTestCase {
         return url
     }
 
-    private func scanner() -> TranscriptScanner { TranscriptScanner(projectsDirectory: root) }
+    /// Isolated history per instance — the default would read and write the real
+    /// Application Support file and let tests leak into each other.
+    private func scanner() -> TranscriptScanner {
+        TranscriptScanner(
+            projectsDirectory: root,
+            history: History(fileURL: root.appendingPathComponent("history.json")))
+    }
 
     // MARK: - Directory state
 
@@ -138,6 +144,47 @@ final class TranscriptScannerTests: XCTestCase {
         // so it is never opened.
         let stats = await scanner().scan(force: true)
         XCTAssertEqual(stats.todayTokens, 100)
+    }
+
+    // MARK: - Breakdowns
+
+    func testGroupsTheWeekByProject() async throws {
+        let now = Date()
+        try write("a/one.jsonl", [
+            line("r1", at: now, output: 300, cwd: "/code/alpha"),
+            line("r2", at: now.addingTimeInterval(-86400), output: 200, cwd: "/code/alpha"),
+        ])
+        try write("b/two.jsonl", [line("r3", at: now, output: 900, cwd: "/code/beta")])
+
+        let stats = await scanner().scan(force: true)
+        // Busiest first.
+        XCTAssertEqual(stats.projects.map(\.name), ["beta", "alpha"])
+        XCTAssertEqual(stats.projects.map(\.tokens), [900, 500])
+    }
+
+    func testProjectComesFromCwdNotTheDirectorySlug() async throws {
+        // The directory under ~/.claude/projects flattens both separators and
+        // underscores to "-", so it can't be reversed into a real name.
+        try write("C--Users-Saeed-js-projects-my-app/s.jsonl", [
+            line("r1", at: Date(), output: 100,
+                 cwd: #"C:\\Users\\Saeed\\js_projects\\my_app"#),
+        ])
+        let stats = await scanner().scan(force: true)
+        XCTAssertEqual(stats.projects.map(\.name), ["my_app"])
+    }
+
+    func testBucketsTheWeekByDay() async throws {
+        let now = Date()
+        try write("a/one.jsonl", [
+            line("r1", at: now, output: 100),
+            line("r2", at: now, output: 50),
+            line("r3", at: now.addingTimeInterval(-2 * 86400), output: 700),
+        ])
+
+        let stats = await scanner().scan(force: true)
+        XCTAssertEqual(stats.days.last?.tokens, 150, "today's bucket")
+        XCTAssertEqual(stats.days.suffix(3).first?.tokens, 700)
+        XCTAssertEqual(stats.days.suffix(2).first?.tokens, 0, "idle day kept as a gap")
     }
 
     // MARK: - Incremental reads

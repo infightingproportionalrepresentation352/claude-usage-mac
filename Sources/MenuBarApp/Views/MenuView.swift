@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuView: View {
     let snapshot: Snapshot?
     let isRefreshing: Bool
+    var update: ReleaseInfo?
     var refresh: () -> Void = {}
 
     var body: some View {
@@ -11,6 +12,17 @@ struct MenuView: View {
                 gauges(snapshot)
                 Divider().padding(.vertical, 10)
                 stats(snapshot)
+
+                Divider().padding(.vertical, 10)
+                SectionLabel(text: "LAST 14 DAYS")
+                    .padding(.bottom, 5)
+                HistoryChart(days: Array(snapshot.stats.days.suffix(14)))
+
+                Divider().padding(.vertical, 10)
+                SectionLabel(text: "BUSIEST PROJECTS")
+                    .padding(.bottom, 5)
+                ProjectList(projects: snapshot.stats.projects)
+
                 if let message = snapshot.errorMessage {
                     Divider().padding(.vertical, 10)
                     banner(message, stale: snapshot.stale)
@@ -22,7 +34,7 @@ struct MenuView: View {
             }
         }
         .padding(14)
-        .frame(width: 260)
+        .frame(width: 290)
     }
 
     private func gauges(_ snapshot: Snapshot) -> some View {
@@ -70,6 +82,16 @@ struct MenuView: View {
             Text("Updated \(Self.relative.localizedString(for: min(snapshot.updatedAt, Date()), relativeTo: Date()))")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
+
+            if let update {
+                Link(destination: update.url) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.circle.fill")
+                        Text("Version \(update.version) available")
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                }
+            }
 
             HStack(spacing: 14) {
                 Button("Refresh", action: refresh)

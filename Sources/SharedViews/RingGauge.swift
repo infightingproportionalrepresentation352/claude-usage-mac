@@ -111,6 +111,22 @@ extension Snapshot {
         stats.weekCost = 24.10
         stats.sessionTokens = 341_000
         stats.sessionCost = 1.02
+        stats.projects = [
+            ProjectUsage(name: "ai-job-hunter-assistant-app", tokens: 4_100_000, cost: 11.80),
+            ProjectUsage(name: "claude-usage-streamdeck-plugin", tokens: 2_600_000, cost: 7.40),
+            ProjectUsage(name: "tokensaver-streamdeck-plugin", tokens: 1_100_000, cost: 3.10),
+            ProjectUsage(name: "dotfiles", tokens: 630_000, cost: 1.80),
+        ]
+        // Uneven, with idle days, so charts get reviewed against realistic shape
+        // rather than a smooth ramp.
+        let daily = [820, 0, 1_400, 2_050, 640, 0, 0, 1_180, 3_400, 2_900, 410, 1_760, 2_240, 1_240]
+        let today = Calendar.current.startOfDay(for: Date())
+        stats.days = daily.enumerated().compactMap { offset, thousands in
+            guard let day = Calendar.current.date(
+                byAdding: .day, value: offset - (daily.count - 1), to: today) else { return nil }
+            return DayUsage(day: day, tokens: thousands * 1_000,
+                            cost: Double(thousands) * 0.0029)
+        }
         return Snapshot(
             usage: UsageData(
                 fiveHour: UsageNode(utilization: 42,

@@ -8,6 +8,7 @@ import WidgetKit
 final class Poller: ObservableObject {
     @Published private(set) var snapshot: Snapshot?
     @Published private(set) var isRefreshing = false
+    @Published private(set) var update: ReleaseInfo?
 
     @AppStorage(SettingsKey.warn) private var warn = 50.0
     @AppStorage(SettingsKey.critical) private var critical = 80.0
@@ -32,6 +33,10 @@ final class Poller: ObservableObject {
     /// ever opens the menu, so this can't wait for a view's onAppear.
     init() {
         start()
+        // After the first refresh has the UI populated, seed history from the
+        // full transcript archive. It reads gigabytes and runs once ever; the
+        // scanner actor serializes it behind the poll already in flight.
+        Task { await TranscriptScanner.shared.backfillHistory() }
     }
 
     func start() {
@@ -65,5 +70,9 @@ final class Poller: ObservableObject {
         snapshot = fresh
         fresh.write()
         WidgetCenter.shared.reloadAllTimelines()
+
+        // Rate-limited internally to four times a day, so calling it every poll
+        // costs nothing.
+        update = await UpdateChecker.shared.check(currentVersion: AppVersion.current)
     }
 }

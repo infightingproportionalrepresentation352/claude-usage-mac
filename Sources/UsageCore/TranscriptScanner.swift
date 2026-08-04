@@ -7,10 +7,54 @@ public struct LogStats: Codable, Sendable, Equatable {
     public var weekCost: Double = 0
     public var sessionTokens: Int = 0
     public var sessionCost: Double = 0
+    /// Busiest projects over the same rolling week, most tokens first.
+    public var projects: [ProjectUsage] = []
+    /// Daily totals, oldest first. Outlives the transcripts themselves — see History.
+    public var days: [DayUsage] = []
     /// False when ~/.claude/projects is missing or unreadable.
     public var ok: Bool = true
 
     public init() {}
+}
+
+public struct ProjectUsage: Codable, Sendable, Equatable, Identifiable {
+    public var name: String
+    public var tokens: Int
+    public var cost: Double
+    public var id: String { name }
+
+    public init(name: String, tokens: Int, cost: Double) {
+        self.name = name
+        self.tokens = tokens
+        self.cost = cost
+    }
+}
+
+public struct DayUsage: Codable, Sendable, Equatable, Identifiable {
+    public var day: Date  // start of day, local time
+    public var tokens: Int
+    public var cost: Double
+    public var id: Date { day }
+
+    public init(day: Date, tokens: Int, cost: Double) {
+        self.day = day
+        self.tokens = tokens
+        self.cost = cost
+    }
+}
+
+extension ProjectUsage {
+    mutating func add(_ entry: LogEntry) {
+        tokens += entry.tokens
+        cost += entry.cost
+    }
+}
+
+extension DayUsage {
+    mutating func add(_ entry: LogEntry) {
+        tokens += entry.tokens
+        cost += entry.cost
+    }
 }
 
 struct LogEntry {
@@ -18,6 +62,10 @@ struct LogEntry {
     let timestamp: Date?
     let tokens: Int
     let cost: Double
+    /// From the entry's `cwd`. The directory name under ~/.claude/projects is a
+    /// slug with separators and underscores both flattened to "-", so it can't be
+    /// reversed into a real name; cwd is exact.
+    let project: String?
 }
 
 /// Walks ~/.claude/projects and totals token usage and cost.
@@ -31,22 +79,29 @@ public actor TranscriptScanner {
 
     private static let ttl: TimeInterval = 30
     private static let window: TimeInterval = 7 * 86400
+    /// How much history travels in the snapshot. More than any view shows, so the
+    /// charts can change range without a new snapshot format.
+    private static let historyDays = 30
 
     private struct FileState {
         var parsedOffset: UInt64 = 0
         var entries: [LogEntry] = []
+        /// One transcript belongs to one project, so this is read once and kept.
+        var project: String?
     }
 
     private var files: [String: FileState] = [:]
     private var cached: LogStats?
     private var cachedAt: Date = .distantPast
     private let root: URL
+    private let history: History
 
-    public init(projectsDirectory: URL? = nil) {
+    public init(projectsDirectory: URL? = nil, history: History? = nil) {
         self.root = projectsDirectory
             ?? FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent(".claude", isDirectory: true)
                 .appendingPathComponent("projects", isDirectory: true)
+        self.history = history ?? History()
     }
 
     public func scan(force: Bool = false) -> LogStats {
@@ -87,10 +142,13 @@ public actor TranscriptScanner {
         var seenToday = Set<String>()
         var seenWeek = Set<String>()
         var seenSession = Set<String>()
+        var byProject: [String: ProjectUsage] = [:]
+        var byDay: [Date: DayUsage] = [:]
 
         for file in live {
             guard let state = files[file.url.path] else { continue }
             let isSession = file.url.path == sessionPath
+            let project = state.project ?? "unknown"
 
             for entry in state.entries {
                 if isSession, claim(entry.id, in: &seenSession) {
@@ -101,6 +159,11 @@ public actor TranscriptScanner {
                 if ts >= cutoff, claim(entry.id, in: &seenWeek) {
                     stats.weekTokens += entry.tokens
                     stats.weekCost += entry.cost
+
+                    byProject[project, default: ProjectUsage(name: project, tokens: 0, cost: 0)]
+                        .add(entry)
+                    let day = calendar.startOfDay(for: ts)
+                    byDay[day, default: DayUsage(day: day, tokens: 0, cost: 0)].add(entry)
                 }
                 if calendar.isDateInToday(ts), claim(entry.id, in: &seenToday) {
                     stats.todayTokens += entry.tokens
@@ -109,9 +172,24 @@ public actor TranscriptScanner {
             }
         }
 
+        stats.projects = byProject.values
+            .sorted { $0.tokens > $1.tokens }
+        // Only the scanned window is recomputed; older days come from the store,
+        // which is why history survives Claude Code pruning its transcripts.
+        history.merge(Array(byDay.values))
+        stats.days = history.recent(Self.historyDays)
+
         cached = stats
         cachedAt = now
         return stats
+    }
+
+    /// Reads every transcript, not just the scan window, to seed history on a
+    /// fresh install. Runs inside the actor so it can't race an ordinary scan;
+    /// callers fire it after the first refresh so the UI isn't waiting on it.
+    public func backfillHistory() {
+        history.backfill(from: root)
+        cached = nil  // next scan re-reads history rather than serving pre-backfill days
     }
 
     /// Entries without an id can't be deduplicated, so they always count —
@@ -168,7 +246,11 @@ public actor TranscriptScanner {
                 files[file.url.path] = state
                 return
             }
+            let before = state.entries.count
             state.parsedOffset += UInt64(Self.append(chunk, to: &state.entries))
+            if state.project == nil {
+                state.project = state.entries[before...].lazy.compactMap(\.project).first
+            }
         } catch {
             return  // leave the offset untouched; retry on the next poll
         }
@@ -222,6 +304,15 @@ public actor TranscriptScanner {
             id: (obj["requestId"] as? String) ?? (message["id"] as? String) ?? "",
             timestamp: parseDate(obj["timestamp"]),
             tokens: tokens,
-            cost: Pricing.cost(usage: usage, model: model))
+            cost: Pricing.cost(usage: usage, model: model),
+            project: projectName(obj["cwd"]))
+    }
+
+    /// Last path component of the working directory, handling both separators
+    /// since transcripts are written on Windows as well as macOS.
+    static func projectName(_ cwd: Any?) -> String? {
+        guard let path = cwd as? String, !path.isEmpty else { return nil }
+        let name = path.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last
+        return name.map(String.init)
     }
 }

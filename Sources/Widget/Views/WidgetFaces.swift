@@ -90,6 +90,10 @@ struct UsageWidgetView: View {
                 StatRow(label: "Session", tokens: snapshot.stats.sessionTokens,
                         cost: snapshot.stats.sessionCost)
             }
+
+            if !snapshot.stats.days.isEmpty {
+                HistoryChart(days: Array(snapshot.stats.days.suffix(14)), height: 30)
+            }
             staleMark(snapshot)
         }
     }

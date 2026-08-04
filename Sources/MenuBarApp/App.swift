@@ -8,6 +8,7 @@ struct ClaudeUsageApp: App {
         MenuBarExtra {
             MenuView(snapshot: poller.snapshot,
                      isRefreshing: poller.isRefreshing,
+                     update: poller.update,
                      refresh: poller.refreshNow)
         } label: {
             // Monospaced digits stop the menu bar shuffling as the number changes.
