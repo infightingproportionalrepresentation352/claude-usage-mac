@@ -48,30 +48,48 @@ public struct Snapshot: Codable, Sendable, Equatable {
 
 extension Snapshot {
 
-    /// Must be prefixed with the Apple Team ID for a non-sandboxed host app to
-    /// resolve the same container the sandboxed widget sees.
     public static let appGroup = "group.com.saeedkolivand.claude-usage"
+    public static let widgetBundleID = "com.saeedkolivand.claude-usage.widget"
 
-    /// Both candidate locations, most-shared first.
+    private static let relativePath = "ClaudeUsage/state.json"
+
+    /// Where a reader looks, freshest wins.
     ///
-    /// App Groups are a provisioning-profile capability and may need a paid
-    /// developer account; Application Support always works but is only readable
-    /// by a non-sandboxed widget. Writing both means the sandbox posture can be
-    /// decided by flipping one entitlement, with no code change here.
+    /// Inside the widget's sandbox `.applicationSupportDirectory` already
+    /// resolves to its own container, which is the path the host writes to —
+    /// so the widget needs no entitlement, no App Group, and no special case.
     public static var locations: [URL] {
         var urls: [URL] = []
         if let group = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroup) {
-            urls.append(group.appendingPathComponent("state.json"))
+            urls.append(group.appendingPathComponent(relativePath))
         }
         if let support = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            urls.append(
-                support
-                    .appendingPathComponent("ClaudeUsage", isDirectory: true)
-                    .appendingPathComponent("state.json"))
+            urls.append(support.appendingPathComponent(relativePath))
         }
         return urls
+    }
+
+    /// The widget extension is sandboxed — macOS requires that of app extensions,
+    /// and an unsandboxed one is simply never registered, so it never appears in
+    /// the widget gallery. That rules out reading `~/.claude` directly.
+    ///
+    /// App Groups would be the textbook answer, but they're a
+    /// provisioning-profile capability: with ad-hoc signing and no team,
+    /// `containerURL(forSecurityApplicationGroupIdentifier:)` returns nil.
+    ///
+    /// The host app, though, is *not* sandboxed. So it writes straight into the
+    /// widget's container, which the widget then reads as its own Application
+    /// Support. No paid account, no entitlement that needs provisioning.
+    static var widgetContainer: URL? {
+        // Inside a sandbox this would resolve to a nested path that doesn't
+        // exist; harmless, because only the unsandboxed host ever writes.
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers", isDirectory: true)
+            .appendingPathComponent(widgetBundleID, isDirectory: true)
+            .appendingPathComponent("Data/Library/Application Support", isDirectory: true)
+            .appendingPathComponent(relativePath)
     }
 
     /// Writes every location that accepts it. Succeeding at one is enough.
@@ -82,7 +100,7 @@ extension Snapshot {
         guard let data = try? encoder.encode(self) else { return false }
 
         var wrote = false
-        for url in Self.locations {
+        for url in Self.locations + [Self.widgetContainer].compactMap({ $0 }) {
             try? FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             // Atomic so the widget can never read a half-written file.

@@ -33,5 +33,17 @@ cp -R "$APP" /Applications/
 
 echo
 echo "Installed /Applications/Claude Usage.app"
-echo "The widget appears in the widget gallery once the app has run at least once."
 open "/Applications/Claude Usage.app"
+
+# The widget only shows up in the gallery once macOS has registered the
+# extension, and a stale registration is the usual reason it doesn't.
+sleep 3
+echo
+echo "Widget registration:"
+if pluginkit -mAvvv -p com.apple.widgetkit-extension 2>/dev/null | grep -i "claude-usage.widget"; then
+    echo "Registered. Add it from the widget gallery."
+else
+    echo "  Not registered. Try:  killall chronod"
+    echo "  Still nothing? Check the extension is sandboxed and signed:"
+    echo "    codesign -dv --entitlements - '/Applications/Claude Usage.app/Contents/PlugIns/ClaudeUsageWidget.appex'"
+fi

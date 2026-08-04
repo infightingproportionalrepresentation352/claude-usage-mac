@@ -138,4 +138,14 @@ final class SnapshotTests: XCTestCase {
         // App Groups may be unavailable, Application Support never is.
         XCTAssertFalse(Snapshot.locations.isEmpty)
     }
+
+    func testHostWritesIntoTheWidgetsOwnContainer() throws {
+        // The sandboxed widget reads this exact path as its Application Support,
+        // which is what makes the widget work without an App Group.
+        let url = try XCTUnwrap(Snapshot.widgetContainer)
+        XCTAssertTrue(
+            url.path.contains("Library/Containers/\(Snapshot.widgetBundleID)/Data"),
+            "not inside the widget container: \(url.path)")
+        XCTAssertTrue(url.path.hasSuffix("Application Support/ClaudeUsage/state.json"))
+    }
 }

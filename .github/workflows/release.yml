@@ -92,8 +92,12 @@ jobs:
 
           ```sh
           brew tap saeedkolivand/tap
+          brew trust --cask saeedkolivand/tap/claude-usage
           brew install --cask claude-usage
           ```
+
+          Homebrew 6 requires third-party taps to be trusted explicitly; the
+          `trust` step is not optional.
 
           Or download the DMG below.
 

@@ -17,8 +17,15 @@ Requires macOS 14 or later.
 
 ```sh
 brew tap saeedkolivand/tap
+brew trust --cask saeedkolivand/tap/claude-usage
 brew install --cask claude-usage
 ```
+
+The `trust` step is required. Since [Homebrew 6.0](https://brew.sh/2026/06/11/homebrew-6.0.0/),
+third-party taps must be explicitly trusted before Homebrew will evaluate their
+Ruby — a response to a [compromised tap being used to ship malware](https://docs.brew.sh/Tap-Trust).
+`--cask <tap>/<cask>` trusts only this one cask; `brew trust saeedkolivand/tap`
+would trust everything in the tap, now and in future.
 
 Or download the DMG from [Releases](../../releases), or build from source with
 `brew install xcodegen && ./build.sh`.
