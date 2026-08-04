@@ -25,19 +25,26 @@ public struct SnapshotBundle: Codable, Sendable, Equatable {
         self.defaultProfileID = defaultProfileID
     }
 
-    /// The snapshot a widget should render, falling back to the default profile
-    /// when its configured one has since been removed.
-    public func snapshot(for profileID: String?) -> Snapshot? {
-        if let profileID, let match = profiles[profileID] { return match }
-        if let defaultProfileID, let match = profiles[defaultProfileID] { return match }
-        return profileList.first.flatMap { profiles[$0.id] }
+    /// Exactly the named profile, or nil.
+    ///
+    /// Deliberately does not fall back: a widget configured for one account and
+    /// quietly showing another's numbers is worse than one that says it can't
+    /// find the account. Callers decide, because "unconfigured" and "configured
+    /// but gone" deserve different answers.
+    public func snapshot(forExactly profileID: String) -> Snapshot? {
+        profiles[profileID]
     }
 
-    public func profile(for profileID: String?) -> Profile? {
-        if let profileID, let match = profileList.first(where: { $0.id == profileID }) {
-            return match
-        }
-        return profileList.first { $0.id == defaultProfileID } ?? profileList.first
+    public func profile(forExactly profileID: String) -> Profile? {
+        profileList.first { $0.id == profileID }
+    }
+
+    public var defaultProfile: Profile? {
+        profileList.first { $0.id == defaultProfileID } ?? profileList.first
+    }
+
+    public var defaultSnapshot: Snapshot? {
+        defaultProfile.flatMap { profiles[$0.id] }
     }
 }
 

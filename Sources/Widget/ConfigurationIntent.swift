@@ -35,9 +35,18 @@ struct ProfileEntity: AppEntity {
 /// Runs inside the widget extension, which is sandboxed and cannot enumerate
 /// config directories — so it reads the list the host already publishes.
 struct ProfileQuery: EntityQuery {
+    /// Always resolves, even when the bundle can't be read right now.
+    ///
+    /// Returning [] here doesn't surface an error — AppIntents just treats the
+    /// parameter as unset, so the widget silently reverts to the default
+    /// account and the user's choice looks like it was ignored. The id is the
+    /// config directory path, which is enough to carry the selection on its own.
     func entities(for identifiers: [String]) async throws -> [ProfileEntity] {
-        let all = try await suggestedEntities()
-        return identifiers.compactMap { id in all.first { $0.id == id } }
+        let known = (try? await suggestedEntities()) ?? []
+        return identifiers.map { id in
+            known.first { $0.id == id }
+                ?? ProfileEntity(id: id, name: (id as NSString).lastPathComponent)
+        }
     }
 
     func suggestedEntities() async throws -> [ProfileEntity] {

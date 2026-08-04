@@ -96,6 +96,25 @@ final class RenderSnapshotTests: XCTestCase {
         }
     }
 
+    /// The states that used to render as "someone else's numbers, silently".
+    func testRenderWidgetProblems() throws {
+        let cases: [(String, WidgetProblem, String?)] = [
+            ("missing-profile", .profileMissing, "Work — saeed@acme.com"),
+            ("no-data", .noData, nil),
+        ]
+        for (name, problem, scope) in cases {
+            for face in Face.allCases {
+                let view = UsageWidgetView(snapshot: nil, scopeLabel: scope,
+                                           problem: problem, face: face)
+                    .padding(face == .small ? 12 : 16)
+                    .frame(width: face.size.width, height: face.size.height)
+                    .background(Color.black)
+                    .environment(\.colorScheme, .dark)
+                try render(view, to: "widget-\(face.rawValue)-\(name).png")
+            }
+        }
+    }
+
     func testRenderWidgetFaces() throws {
         for face in Face.allCases {
             for state in Self.states {

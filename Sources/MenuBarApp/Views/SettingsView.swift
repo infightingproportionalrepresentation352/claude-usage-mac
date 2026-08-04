@@ -22,6 +22,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.autoCheckUpdates) private var autoCheckUpdates = true
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var launchError: String?
+    @State private var extraPaths = ProfileStore.savedExtraPaths()
 
     var body: some View {
         Form {
@@ -49,7 +50,7 @@ struct SettingsView: View {
         // Amber above red would colour everything red; keep the bands ordered.
         .onChange(of: warn) { _, new in if new > critical { critical = new } }
         .onChange(of: critical) { _, new in if new < warn { warn = new } }
-        .onAppear { poller.rediscover() }
+        .onAppear(perform: reload)
     }
 
     // MARK: - Profiles
@@ -83,6 +84,22 @@ struct SettingsView: View {
                 }
             }
 
+            // Folders added by hand are the only removable ones — the rest are
+            // discovered, so "removing" them would just mean finding them again
+            // on the next rescan.
+            ForEach(extraPaths, id: \.self) { path in
+                HStack {
+                    Text((path as NSString).abbreviatingWithTildeInPath)
+                        .font(.caption)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Remove") { removeFolder(path) }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                }
+            }
+
             HStack {
                 Button("Add Folder…", action: addFolder)
                 Spacer()
@@ -109,6 +126,16 @@ struct SettingsView: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         ProfileStore.addExtraPath(url.path)
+        reload()
+    }
+
+    private func removeFolder(_ path: String) {
+        ProfileStore.removeExtraPath(path)
+        reload()
+    }
+
+    private func reload() {
+        extraPaths = ProfileStore.savedExtraPaths()
         poller.rediscover()
     }
 

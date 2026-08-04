@@ -17,16 +17,41 @@ enum Face: String, CaseIterable {
 
 /// The widget body for every family. Split out from the `@main` entry point so
 /// the snapshot tests can render these without linking an app extension.
+/// Why a widget can't show what it was configured to show.
+enum WidgetProblem {
+    case noData
+    case profileMissing
+
+    var headline: String {
+        switch self {
+        case .noData:         return "Open Claude Usage"
+        case .profileMissing: return "Profile not found"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .noData:
+            return "The menu bar app supplies the data"
+        case .profileMissing:
+            return "Pick another in Edit Widget"
+        }
+    }
+}
+
 struct UsageWidgetView: View {
     let snapshot: Snapshot?
     /// Set when this widget is scoped to a single project.
     var project: ProjectUsage?
     var scopeLabel: String?
+    var problem: WidgetProblem?
     let face: Face
 
     var body: some View {
         Group {
-            if let project {
+            if let problem {
+                unavailable(problem)
+            } else if let project {
                 projectFace(project)
             } else if let snapshot {
                 VStack(spacing: face == .small ? 6 : 10) {
@@ -234,13 +259,28 @@ struct UsageWidgetView: View {
     }
 
     private var empty: some View {
+        unavailable(.noData)
+    }
+
+    /// Says what went wrong rather than rendering another account's numbers,
+    /// which would look like the widget working and be wrong.
+    private func unavailable(_ problem: WidgetProblem) -> some View {
         VStack(spacing: 6) {
-            Image(systemName: "chart.pie")
+            Image(systemName: problem == .profileMissing
+                  ? "questionmark.folder" : "chart.pie")
                 .font(.system(size: 22))
                 .foregroundStyle(.tertiary)
-            Text("Open Claude Usage")
+            Text(problem.headline)
                 .font(.system(size: 11, weight: .medium))
-            Text("The menu bar app supplies the data")
+                .multilineTextAlignment(.center)
+            if let scopeLabel {
+                Text(scopeLabel)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Text(problem.detail)
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
