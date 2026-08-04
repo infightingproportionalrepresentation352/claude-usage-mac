@@ -105,32 +105,10 @@ final class RenderSnapshotTests: XCTestCase {
         }
     }
 
-    func testRenderSettings() throws {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let cases: [(String, [Profile])] = [
-            ("one", [Profile(configDir: home.appendingPathComponent(".claude"),
-                             isDefault: true, email: "saeed@example.com",
-                             organization: "Personal", plan: "Max")]),
-            ("many", [
-                Profile(configDir: home.appendingPathComponent(".claude"),
-                        isDefault: true, email: "saeed@example.com",
-                        organization: "Personal", plan: "Max"),
-                Profile(configDir: home.appendingPathComponent(".claude-work"),
-                        isDefault: false, email: "saeed@acme.com",
-                        organization: "Acme Corp", plan: "Team"),
-            ]),
-            ("none", []),
-        ]
-
-        for (name, profiles) in cases {
-            for scheme in [ColorScheme.light, .dark] {
-                // Inert: no discovery against the real home, no poll loop.
-                let view = SettingsView(poller: Poller(autostart: false, profiles: profiles))
-                    .environment(\.colorScheme, scheme)
-                try render(view, to: "settings-\(name)-\(scheme.name).png")
-            }
-        }
-    }
+    // No settings renders: `Form` with `.formStyle(.grouped)` is NSTableView-backed
+    // and ImageRenderer draws it empty, so the PNGs were blank grey rectangles
+    // pretending to be coverage. The native grouped Form is the right control for
+    // a macOS settings window; reviewing it needs a real launch.
 
     // MARK: - Rendering
 

@@ -18,12 +18,19 @@ IDENTITY="${CODE_SIGN_IDENTITY:--}"
 DERIVED=".build-xcode"
 APP="$DERIVED/Build/Products/Release/Claude Usage.app"
 
+# project.yml pins a placeholder that only the release workflow overrides, so
+# without this a local build claims that version forever and nags about an
+# update that is really itself.
+VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+VERSION="${VERSION:-0.0.0}"
+
 xcodegen generate
 xcodebuild build \
     -project ClaudeUsage.xcodeproj \
     -scheme ClaudeUsage \
     -configuration Release \
     -derivedDataPath "$DERIVED" \
+    MARKETING_VERSION="$VERSION" \
     CODE_SIGN_IDENTITY="$IDENTITY"
 
 # Must not be running, or the copy replaces a live bundle.

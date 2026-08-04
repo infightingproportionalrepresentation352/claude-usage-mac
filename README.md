@@ -128,6 +128,9 @@ What the snapshot loop cannot prove, and needs a pass on real hardware:
 - The popover's Refresh / Settings / Quit buttons. `ImageRenderer` draws
   interactive controls as unavailable, so they show as prohibition badges in
   every snapshot. Layout around them is real; the buttons themselves aren't.
+- The Settings window. `Form` with `.formStyle(.grouped)` is NSTableView-backed
+  and renders empty detached, so there are deliberately no settings snapshots
+  rather than blank ones posing as coverage.
 
 ## Try the data layer
 
