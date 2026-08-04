@@ -29,6 +29,7 @@ targets:
       - Sources/UsageCore
       - Sources/SharedViews
       - Sources/MenuBarApp
+      - Sources/MenuBarApp/Assets.xcassets
     dependencies:
       - target: ClaudeUsageWidget
         embed: true
@@ -38,8 +39,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.saeedkolivand.claude-usage
         PRODUCT_NAME: Claude Usage
         GENERATE_INFOPLIST_FILE: YES
-        # No Dock icon, no menu bar — this app is only its status item.
+        # No Dock icon, no menu bar — this app is only its status item. The icon
+        # still shows in Finder, the DMG, login items, and the widget gallery.
         INFOPLIST_KEY_LSUIElement: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_NSHumanReadableCopyright: "MIT"
         COMBINE_HIDPI_IMAGES: YES
     entitlements:

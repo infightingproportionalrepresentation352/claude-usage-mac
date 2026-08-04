@@ -84,6 +84,13 @@ jobs:
           # extension actually embedded and that both entitlements applied.
           test -d "$APP/Contents/PlugIns/ClaudeUsageWidget.appex" \
             || { echo "widget did not embed"; ls -R "$APP/Contents"; exit 1; }
+
+          # A missing icon should fail the build, not ship as a blank square in
+          # the widget gallery.
+          test -f "$APP/Contents/Resources/Assets.car" \
+            || { echo "asset catalog missing — no app icon"; exit 1; }
+          assetutil --info "$APP/Contents/Resources/Assets.car" \
+            | grep -q AppIcon || { echo "Assets.car has no AppIcon"; exit 1; }
           codesign -dv --entitlements - "$APP" 2>&1 | tail -20
           codesign -dv --entitlements - "$APP/Contents/PlugIns/ClaudeUsageWidget.appex" 2>&1 | tail -20
 
