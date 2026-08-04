@@ -77,6 +77,25 @@ final class RenderSnapshotTests: XCTestCase {
 
     // MARK: - Tests
 
+    /// Project-scoped widgets are a different layout entirely — no gauges, since
+    /// limits are account-level — so they get their own pass.
+    func testRenderProjectScopedWidgets() throws {
+        let project = try XCTUnwrap(Snapshot.preview.stats.projects.first)
+        for face in Face.allCases {
+            for scheme in [ColorScheme.light, .dark] {
+                let view = UsageWidgetView(
+                    snapshot: .preview, project: project,
+                    scopeLabel: "Work — saeed@acme.com · \(project.name)", face: face)
+                    .padding(face == .small ? 12 : 16)
+                    .frame(width: face.size.width, height: face.size.height)
+                    .background(scheme == .dark ? Color.black : Color.white)
+                    .environment(\.colorScheme, scheme)
+
+                try render(view, to: "widget-\(face.rawValue)-project-\(scheme.name).png")
+            }
+        }
+    }
+
     func testRenderWidgetFaces() throws {
         for face in Face.allCases {
             for state in Self.states {

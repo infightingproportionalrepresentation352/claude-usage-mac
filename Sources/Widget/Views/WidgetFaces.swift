@@ -19,21 +19,85 @@ enum Face: String, CaseIterable {
 /// the snapshot tests can render these without linking an app extension.
 struct UsageWidgetView: View {
     let snapshot: Snapshot?
+    /// Set when this widget is scoped to a single project.
+    var project: ProjectUsage?
+    var scopeLabel: String?
     let face: Face
 
     var body: some View {
         Group {
-            if let snapshot {
-                switch face {
-                case .small:  small(snapshot)
-                case .medium: medium(snapshot)
-                case .large:  large(snapshot)
+            if let project {
+                projectFace(project)
+            } else if let snapshot {
+                VStack(spacing: face == .small ? 6 : 10) {
+                    scopeHeader
+                    switch face {
+                    case .small:  small(snapshot)
+                    case .medium: medium(snapshot)
+                    case .large:  large(snapshot)
+                    }
                 }
             } else {
                 empty
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Only drawn when the widget is scoped to something — a single-profile,
+    /// whole-account widget gets no extra chrome.
+    @ViewBuilder
+    private var scopeHeader: some View {
+        if let scopeLabel {
+            Text(scopeLabel)
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.4)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - Project scope
+
+    /// No gauges here on purpose: the 5-hour and weekly percentages are
+    /// account-level, so there is no such thing as a project's limit.
+    private func projectFace(_ project: ProjectUsage) -> some View {
+        VStack(alignment: .leading, spacing: face == .small ? 6 : 10) {
+            scopeHeader
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(Format.tokens(project.todayTokens))
+                    .font(.system(size: face == .small ? 30 : 36,
+                                  weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                Text(Format.cost(project.todayCost))
+                    .font(.system(size: 13))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            Text("TODAY")
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(.tertiary)
+
+            if face != .small {
+                Divider()
+                StatRow(label: "This week", tokens: project.tokens, cost: project.cost)
+            }
+
+            if face == .large, !project.days.isEmpty {
+                Spacer(minLength: 0)
+                // Seven days, not fourteen: per-project days are recomputed from
+                // the scan window rather than persisted.
+                HistoryChart(days: project.days, height: 34)
+            } else if face != .small {
+                Spacer(minLength: 0)
+            }
+        }
     }
 
     // MARK: - Families

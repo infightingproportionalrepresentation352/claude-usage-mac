@@ -111,10 +111,23 @@ extension Snapshot {
         stats.weekCost = 24.10
         stats.sessionTokens = 341_000
         stats.sessionCost = 1.02
+        let today = Calendar.current.startOfDay(for: Date())
+        func recentDays(_ peak: Int) -> [DayUsage] {
+            (0..<7).reversed().compactMap { offset in
+                guard let day = Calendar.current.date(byAdding: .day, value: -offset, to: today)
+                else { return nil }
+                let scale = [0.4, 0.9, 0.2, 1.0, 0.55, 0.0, 0.7][offset]
+                return DayUsage(day: day, tokens: Int(Double(peak) * scale),
+                                cost: Double(peak) * scale / 1e6 * 3)
+            }
+        }
         stats.projects = [
-            ProjectUsage(name: "ai-job-hunter-assistant-app", tokens: 4_100_000, cost: 11.80),
-            ProjectUsage(name: "claude-usage-streamdeck-plugin", tokens: 2_600_000, cost: 7.40),
-            ProjectUsage(name: "tokensaver-streamdeck-plugin", tokens: 1_100_000, cost: 3.10),
+            ProjectUsage(name: "ai-job-hunter-assistant-app", tokens: 4_100_000, cost: 11.80,
+                         todayTokens: 720_000, todayCost: 2.05, days: recentDays(900_000)),
+            ProjectUsage(name: "claude-usage-streamdeck-plugin", tokens: 2_600_000, cost: 7.40,
+                         todayTokens: 310_000, todayCost: 0.90, days: recentDays(600_000)),
+            ProjectUsage(name: "tokensaver-streamdeck-plugin", tokens: 1_100_000, cost: 3.10,
+                         todayTokens: 140_000, todayCost: 0.40, days: recentDays(300_000)),
             ProjectUsage(name: "dotfiles", tokens: 630_000, cost: 1.80),
         ]
         // Uneven, with idle days, so charts get reviewed against realistic shape

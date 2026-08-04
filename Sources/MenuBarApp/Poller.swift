@@ -3,7 +3,7 @@ import SwiftUI
 import WidgetKit
 
 /// Owns the refresh loop. The widget never polls anything itself — this writes
-/// the snapshot file and tells WidgetKit to reload.
+/// the snapshot files and tells WidgetKit to reload.
 @MainActor
 final class Poller: ObservableObject {
     @Published private(set) var snapshot: Snapshot?
@@ -21,7 +21,11 @@ final class Poller: ObservableObject {
 
     private static let interval: Duration = .seconds(60)
     private var loop: Task<Void, Never>?
-    private var monitor: ProfileMonitor?
+
+    /// One per profile, keyed by `Profile.id`. Every profile is polled, not just
+    /// the selected one, because each widget can be scoped to a different
+    /// account and the sandboxed widget cannot fetch anything itself.
+    private var monitors: [String: ProfileMonitor] = [:]
 
     /// What the menu bar itself shows. Deliberately text-only: menu bar items
     /// are rendered as template images, so a coloured dot would come out grey.
@@ -32,6 +36,10 @@ final class Poller: ObservableObject {
         guard let pct = snapshot.pct(metric) else { return "--" }
         let text = Format.percent(pct)
         return snapshot.level(metric) == .critical ? "! \(text)" : text
+    }
+
+    var activeProfile: Profile? {
+        profiles.first { $0.id == selectedProfile } ?? profiles.first
     }
 
     /// Starts immediately: the menu bar title must be populated before the user
@@ -49,30 +57,33 @@ final class Poller: ObservableObject {
         start()
     }
 
-    /// Rebuilds the profile list, and the monitor if the active profile changed.
-    /// Cheap enough to run on every settings visit — it stats a handful of
-    /// directories and parses one small JSON per profile.
+    /// Rebuilds the profile list and the per-profile monitors. Cheap enough to
+    /// run on every settings visit — it stats a handful of directories and parses
+    /// one small JSON per profile.
     func rediscover() {
         profiles = ProfileStore.discover(extraPaths: ProfileStore.savedExtraPaths())
-        let active = profiles.first { $0.id == selectedProfile } ?? profiles.first
 
-        guard let active else {
-            monitor = nil
-            snapshot = nil
-            return
+        let live = Set(profiles.map(\.id))
+        monitors = monitors.filter { live.contains($0.key) }
+
+        for profile in profiles where monitors[profile.id] == nil {
+            let monitor = ProfileMonitor(profile: profile)
+            monitors[profile.id] = monitor
+            // Seeds history from the full transcript archive. Runs once ever per
+            // profile, behind whatever poll is already in flight.
+            Task { await monitor.backfillHistory() }
         }
-        if selectedProfile != active.id { selectedProfile = active.id }
-        guard monitor?.profile.id != active.id else { return }
 
-        monitor = ProfileMonitor(profile: active)
-        // Nothing stale must sit under a newly selected profile's name.
-        snapshot = nil
-        Task { [monitor] in await monitor?.backfillHistory() }
+        if let active = activeProfile, selectedProfile != active.id {
+            selectedProfile = active.id
+        }
+        if activeProfile == nil { snapshot = nil }
     }
 
     func select(_ profile: Profile) {
         selectedProfile = profile.id
-        rediscover()
+        // Nothing stale must sit under a newly selected profile's name.
+        snapshot = monitors[profile.id] == nil ? nil : snapshot
         refreshNow()
     }
 
@@ -106,15 +117,28 @@ final class Poller: ObservableObject {
     private func refresh(force: Bool = false) async {
         // A manual tap while the first (slow) scan is still running would queue a
         // second full read of the same gigabytes.
-        guard !isRefreshing, let monitor else { return }
+        guard !isRefreshing, !profiles.isEmpty else { return }
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let fresh = await monitor.snapshot(
-            userAgent: userAgent, force: force, warn: warn, critical: critical,
-            label: profiles.count > 1 ? monitor.profile.displayName : nil)
-        snapshot = fresh
-        fresh.write()
+        let labelled = profiles.count > 1
+        var bundle = SnapshotBundle(
+            profileList: profiles,
+            defaultProfileID: profiles.first { $0.isDefault }?.id ?? profiles.first?.id)
+
+        for profile in profiles {
+            guard let monitor = monitors[profile.id] else { continue }
+            bundle.profiles[profile.id] = await monitor.snapshot(
+                userAgent: userAgent, force: force, warn: warn, critical: critical,
+                label: labelled ? profile.displayName : nil)
+        }
+        bundle.updatedAt = Date()
+
+        snapshot = activeProfile.flatMap { bundle.profiles[$0.id] }
+        bundle.write()
+        // Kept alongside the bundle so a widget built before per-widget scoping
+        // still finds what it expects.
+        snapshot?.write()
         WidgetCenter.shared.reloadAllTimelines()
 
         guard autoCheckUpdates else { return }

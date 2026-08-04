@@ -19,14 +19,27 @@ public struct LogStats: Codable, Sendable, Equatable {
 
 public struct ProjectUsage: Codable, Sendable, Equatable, Identifiable {
     public var name: String
+    /// Rolling week, matching the scanner's window.
     public var tokens: Int
     public var cost: Double
+    public var todayTokens: Int
+    public var todayCost: Double
+    /// Only as far back as the scan window — unlike whole-account history, which
+    /// is persisted, per-project days are recomputed each scan and so stop at
+    /// seven. Long enough for a widget's sparkline, and it keeps the history
+    /// file from growing by a factor of twenty.
+    public var days: [DayUsage]
+
     public var id: String { name }
 
-    public init(name: String, tokens: Int, cost: Double) {
+    public init(name: String, tokens: Int = 0, cost: Double = 0,
+                todayTokens: Int = 0, todayCost: Double = 0, days: [DayUsage] = []) {
         self.name = name
         self.tokens = tokens
         self.cost = cost
+        self.todayTokens = todayTokens
+        self.todayCost = todayCost
+        self.days = days
     }
 }
 
@@ -43,10 +56,29 @@ public struct DayUsage: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-extension ProjectUsage {
-    mutating func add(_ entry: LogEntry) {
+/// Accumulator for one project while a scan is in flight. Days live in a
+/// dictionary here and become a sorted array only once, at the end.
+struct ProjectAccumulator {
+    var tokens = 0
+    var cost = 0.0
+    var todayTokens = 0
+    var todayCost = 0.0
+    var days: [Date: DayUsage] = [:]
+
+    mutating func add(_ entry: LogEntry, day: Date, isToday: Bool) {
         tokens += entry.tokens
         cost += entry.cost
+        if isToday {
+            todayTokens += entry.tokens
+            todayCost += entry.cost
+        }
+        days[day, default: DayUsage(day: day, tokens: 0, cost: 0)].add(entry)
+    }
+
+    func finish(name: String) -> ProjectUsage {
+        ProjectUsage(name: name, tokens: tokens, cost: cost,
+                     todayTokens: todayTokens, todayCost: todayCost,
+                     days: days.values.sorted { $0.day < $1.day })
     }
 }
 
@@ -80,6 +112,8 @@ public actor TranscriptScanner {
     /// How much history travels in the snapshot. More than any view shows, so the
     /// charts can change range without a new snapshot format.
     private static let historyDays = 30
+    /// How many projects travel in the snapshot, busiest first.
+    private static let maxProjects = 20
 
     private struct FileState {
         var parsedOffset: UInt64 = 0
@@ -145,7 +179,7 @@ public actor TranscriptScanner {
         var seenToday = Set<String>()
         var seenWeek = Set<String>()
         var seenSession = Set<String>()
-        var byProject: [String: ProjectUsage] = [:]
+        var byProject: [String: ProjectAccumulator] = [:]
         var byDay: [Date: DayUsage] = [:]
 
         for file in live {
@@ -159,24 +193,31 @@ public actor TranscriptScanner {
                     stats.sessionCost += entry.cost
                 }
                 guard let ts = entry.timestamp else { continue }
+                let isToday = calendar.isDateInToday(ts)
+
                 if ts >= cutoff, claim(entry.id, in: &seenWeek) {
                     stats.weekTokens += entry.tokens
                     stats.weekCost += entry.cost
 
-                    byProject[project, default: ProjectUsage(name: project, tokens: 0, cost: 0)]
-                        .add(entry)
                     let day = calendar.startOfDay(for: ts)
+                    byProject[project, default: ProjectAccumulator()]
+                        .add(entry, day: day, isToday: isToday)
                     byDay[day, default: DayUsage(day: day, tokens: 0, cost: 0)].add(entry)
                 }
-                if calendar.isDateInToday(ts), claim(entry.id, in: &seenToday) {
+                if isToday, claim(entry.id, in: &seenToday) {
                     stats.todayTokens += entry.tokens
                     stats.todayCost += entry.cost
                 }
             }
         }
 
-        stats.projects = byProject.values
+        stats.projects = byProject
+            .map { $0.value.finish(name: $0.key) }
             .sorted { $0.tokens > $1.tokens }
+            // Bounded so the snapshot file stays small; nobody scopes a widget to
+            // their 40th-busiest directory.
+            .prefix(Self.maxProjects)
+            .map { $0 }
         // Only the scanned window is recomputed; older days come from the store,
         // which is why history survives Claude Code pruning its transcripts.
         history.merge(Array(byDay.values))
