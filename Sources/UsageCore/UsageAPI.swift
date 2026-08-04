@@ -32,9 +32,10 @@ public struct FetchResult: Sendable {
     }
 }
 
+/// One per profile. Deliberately not a singleton: the cache below is
+/// single-slot, so sharing one across profiles would serve whichever account
+/// fetched most recently to whoever asked next.
 public actor UsageAPI {
-    public static let shared = UsageAPI()
-
     public static let endpoint = URL(string: "https://api.anthropic.com/api/oauth/usage")!
     public static let defaultUserAgent = "claude-code/2.0.31"
 
@@ -55,6 +56,12 @@ public actor UsageAPI {
     private var lastFailAt: Date = .distantPast
     private var lastFailError: String?
 
+    private let profile: Profile
+
+    public init(profile: Profile) {
+        self.profile = profile
+    }
+
     private var isStale: Bool {
         cached != nil && Date().timeIntervalSince(cachedAt) > Self.staleAfter
     }
@@ -69,7 +76,7 @@ public actor UsageAPI {
             return FetchResult(data: cached, error: err, stale: isStale)
         }
 
-        let creds = CredentialStore.read()
+        let creds = CredentialStore.read(for: profile)
         guard let token = creds.token else { return fail("no-token") }
         // An already-expired token guarantees a 401 — skip the request and wait
         // for Claude Code to write a refreshed one.

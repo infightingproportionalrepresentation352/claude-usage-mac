@@ -44,6 +44,26 @@ public enum ProfileStore {
 
     public static let extraPathsKey = "extraProfilePaths"
 
+    /// Folders the user pointed at by hand, for config dirs that live somewhere
+    /// discovery would never look.
+    public static func savedExtraPaths(
+        defaults: UserDefaults = .standard
+    ) -> [String] {
+        defaults.stringArray(forKey: extraPathsKey) ?? []
+    }
+
+    public static func addExtraPath(_ path: String, defaults: UserDefaults = .standard) {
+        var paths = savedExtraPaths(defaults: defaults)
+        guard !paths.contains(path) else { return }
+        paths.append(path)
+        defaults.set(paths, forKey: extraPathsKey)
+    }
+
+    public static func removeExtraPath(_ path: String, defaults: UserDefaults = .standard) {
+        defaults.set(savedExtraPaths(defaults: defaults).filter { $0 != path },
+                     forKey: extraPathsKey)
+    }
+
     /// Every profile on this machine, default first.
     ///
     /// `environment` and `home` are injectable so the tests can build a fake

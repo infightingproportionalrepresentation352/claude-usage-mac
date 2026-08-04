@@ -17,7 +17,7 @@ struct ClaudeUsageApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView()
+            SettingsView(poller: poller)
         }
     }
 }

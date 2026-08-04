@@ -20,6 +20,9 @@ public struct Snapshot: Codable, Sendable, Equatable {
     /// sandboxed and cannot see the app's defaults without an App Group.
     public var warn: Double
     public var critical: Double
+    /// Which profile these numbers belong to. Set only when the machine has more
+    /// than one, so the ordinary single-profile case shows no extra chrome.
+    public var profileLabel: String?
 
     public init(
         updatedAt: Date = Date(),

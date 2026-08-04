@@ -53,6 +53,11 @@ final class RenderSnapshotTests: XCTestCase {
                     sevenDay: UsageNode(utilization: 100,
                                         resetsAt: Date().addingTimeInterval(6 * 86400 + 23 * 3600))),
                 stats: busy)),
+            ("profile", {
+                var scoped = Snapshot.preview
+                scoped.profileLabel = "Work — saeed@acme.com"
+                return scoped
+            }()),
             ("no-token", Snapshot(usage: nil, error: "no-token")),
             ("stale", Snapshot(usage: .init(
                 fiveHour: UsageNode(utilization: 42, resetsAt: nil), sevenDay: nil),
@@ -101,10 +106,29 @@ final class RenderSnapshotTests: XCTestCase {
     }
 
     func testRenderSettings() throws {
-        for scheme in [ColorScheme.light, .dark] {
-            let view = SettingsView()
-                .environment(\.colorScheme, scheme)
-            try render(view, to: "settings-\(scheme.name).png")
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let cases: [(String, [Profile])] = [
+            ("one", [Profile(configDir: home.appendingPathComponent(".claude"),
+                             isDefault: true, email: "saeed@example.com",
+                             organization: "Personal", plan: "Max")]),
+            ("many", [
+                Profile(configDir: home.appendingPathComponent(".claude"),
+                        isDefault: true, email: "saeed@example.com",
+                        organization: "Personal", plan: "Max"),
+                Profile(configDir: home.appendingPathComponent(".claude-work"),
+                        isDefault: false, email: "saeed@acme.com",
+                        organization: "Acme Corp", plan: "Team"),
+            ]),
+            ("none", []),
+        ]
+
+        for (name, profiles) in cases {
+            for scheme in [ColorScheme.light, .dark] {
+                // Inert: no discovery against the real home, no poll loop.
+                let view = SettingsView(poller: Poller(autostart: false, profiles: profiles))
+                    .environment(\.colorScheme, scheme)
+                try render(view, to: "settings-\(name)-\(scheme.name).png")
+            }
         }
     }
 

@@ -9,6 +9,17 @@ struct MenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let snapshot {
+                // Only present when the machine has more than one profile — the
+                // ordinary case gets no extra chrome.
+                if let label = snapshot.profileLabel {
+                    HStack(spacing: 5) {
+                        Image(systemName: "person.crop.circle")
+                        Text(label).lineLimit(1).truncationMode(.middle)
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 10)
+                }
                 gauges(snapshot)
                 Divider().padding(.vertical, 10)
                 stats(snapshot)
@@ -81,7 +92,7 @@ struct MenuView: View {
     // conventionally do, and it reads without a tooltip.
     private func footer(_ snapshot: Snapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(Self.updated(snapshot.updatedAt))
+            Text("\(Self.updated(snapshot.updatedAt)) · v\(AppVersion.current)")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
 

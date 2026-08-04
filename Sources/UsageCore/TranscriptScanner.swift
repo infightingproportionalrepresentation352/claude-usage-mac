@@ -75,8 +75,6 @@ struct LogEntry {
 /// of transcripts with a single 75 MB file in it. So each file's parsed entries
 /// are cached and only bytes appended since the last read are parsed.
 public actor TranscriptScanner {
-    public static let shared = TranscriptScanner()
-
     private static let ttl: TimeInterval = 30
     private static let window: TimeInterval = 7 * 86400
     /// How much history travels in the snapshot. More than any view shows, so the
@@ -102,6 +100,11 @@ public actor TranscriptScanner {
                 .appendingPathComponent(".claude", isDirectory: true)
                 .appendingPathComponent("projects", isDirectory: true)
         self.history = history ?? History()
+    }
+
+    public init(profile: Profile) {
+        self.root = profile.projectsDirectory
+        self.history = History(profile: profile)
     }
 
     public func scan(force: Bool = false) -> LogStats {

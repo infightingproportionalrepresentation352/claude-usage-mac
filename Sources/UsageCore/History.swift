@@ -28,6 +28,37 @@ public final class History {
         self.url = fileURL ?? Self.defaultURL
     }
 
+    public convenience init(profile: Profile) {
+        self.init(fileURL: Self.url(for: profile))
+    }
+
+    /// Per profile, or switching corrupts it: `merge` overwrites by date, so one
+    /// account's days would clobber another's for the same dates. The default
+    /// profile keeps the original filename, so the file shipped in v0.2.0 needs
+    /// no migration.
+    public static func url(for profile: Profile) -> URL {
+        let directory = defaultURL.deletingLastPathComponent()
+        guard !profile.isDefault else { return defaultURL }
+        return directory.appendingPathComponent("history-\(slug(profile.configDir.path)).json")
+    }
+
+    /// A readable slug rather than a hash — someone poking around in Finder
+    /// should be able to tell which file belongs to which directory.
+    static func slug(_ path: String) -> String {
+        var out = ""
+        var pendingDash = false
+        for character in path.lowercased() {
+            if character.isLetter || character.isNumber {
+                if pendingDash, !out.isEmpty { out.append("-") }
+                out.append(character)
+                pendingDash = false
+            } else {
+                pendingDash = true
+            }
+        }
+        return out.isEmpty ? "profile" : out
+    }
+
     public static var defaultURL: URL {
         let support = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first

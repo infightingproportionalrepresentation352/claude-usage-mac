@@ -17,17 +17,29 @@ public enum CredentialStore {
             .appendingPathComponent(".credentials.json")
     }
 
+    /// The default profile only. Prefer `read(for:)`.
     public static func read() -> Credentials {
-        // macOS keeps the token in the login Keychain. Fall through to the file
-        // anyway, since a machine can have both.
-        if let fromKeychain = readKeychain(), fromKeychain.token != nil {
-            return fromKeychain
-        }
-        return readFile() ?? .none
+        read(for: Profile(configDir: filePath.deletingLastPathComponent(), isDefault: true))
     }
 
-    static func readFile() -> Credentials? {
-        guard let data = try? Data(contentsOf: filePath) else { return nil }
+    /// File first, Keychain second — and the Keychain **only for the default
+    /// profile**.
+    ///
+    /// There is exactly one Keychain item, `Claude Code-credentials`, with no
+    /// per-profile variant. Falling back to it for a relocated profile would show
+    /// another account's limit percentages under this profile's name: wrong, and
+    /// invisibly so. A non-default profile with no credentials file has no
+    /// reachable token, and should say so.
+    public static func read(for profile: Profile) -> Credentials {
+        if let fromFile = readFile(at: profile.credentialsFile), fromFile.token != nil {
+            return fromFile
+        }
+        guard profile.isDefault else { return .none }
+        return readKeychain() ?? .none
+    }
+
+    static func readFile(at url: URL) -> Credentials? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
         return parse(data)
     }
 

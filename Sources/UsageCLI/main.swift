@@ -4,22 +4,52 @@ import UsageCore
 // Smoke test for the whole data path with no UI involved — CI runs this, and
 // it's the fastest way to compare numbers against the Stream Deck plugin.
 //
-//   usage-cli            pretty summary
-//   usage-cli --json     the snapshot as the widget will see it
-//   usage-cli --write    also write it to disk (feeds a widget with no host app)
+//   usage-cli                    the default profile, pretty
+//   usage-cli --profiles         list discovered profiles and exit
+//   usage-cli --profile <path>   a specific config dir
+//   usage-cli --json             the snapshot as the widget will see it
+//   usage-cli --write            also write it to disk
 
-let args = Set(CommandLine.arguments.dropFirst())
-let snapshot = await Refresh.snapshot(force: true)
+let arguments = Array(CommandLine.arguments.dropFirst())
+let flags = Set(arguments)
 
-if args.contains("--write") {
-    let ok = snapshot.write()
-    FileHandle.standardError.write(Data("write: \(ok ? "ok" : "failed")\n".utf8))
-    for url in Snapshot.locations {
-        FileHandle.standardError.write(Data("  \(url.path)\n".utf8))
+let discovered = ProfileStore.discover(extraPaths: ProfileStore.savedExtraPaths())
+
+if flags.contains("--profiles") {
+    if discovered.isEmpty {
+        print("no profiles found — looked for a 'projects' folder in ~/.claude and alongside it")
+        exit(1)
     }
+    for profile in discovered {
+        let tags = [profile.organization, profile.plan].compactMap { $0 }.joined(separator: " · ")
+        print("\(profile.isDefault ? "*" : " ") \(profile.displayName)")
+        print("    \(profile.configDir.path)\(tags.isEmpty ? "" : "  [\(tags)]")")
+    }
+    exit(0)
 }
 
-if args.contains("--json") {
+let selected: Profile? = {
+    guard let index = arguments.firstIndex(of: "--profile"),
+          index + 1 < arguments.count else { return discovered.first }
+    let wanted = URL(fileURLWithPath: (arguments[index + 1] as NSString).expandingTildeInPath)
+        .standardizedFileURL.path
+    return discovered.first { $0.configDir.standardizedFileURL.path == wanted }
+}()
+
+guard let profile = selected else {
+    FileHandle.standardError.write(Data("no matching profile\n".utf8))
+    exit(1)
+}
+
+let snapshot = await ProfileMonitor(profile: profile).snapshot(
+    force: true, label: discovered.count > 1 ? profile.displayName : nil)
+
+if flags.contains("--write") {
+    let ok = snapshot.write()
+    FileHandle.standardError.write(Data("write: \(ok ? "ok" : "failed")\n".utf8))
+}
+
+if flags.contains("--json") {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -28,6 +58,7 @@ if args.contains("--json") {
     }
 } else {
     let s = snapshot
+    print("profile: \(profile.displayName)  (\(profile.configDir.path))")
     if let error = s.error {
         print("error:   \(error)\(s.stale ? " (showing stale data)" : "")")
     }
@@ -36,8 +67,11 @@ if args.contains("--json") {
     print("today:   \(Format.tokens(s.stats.todayTokens))  \(Format.cost(s.stats.todayCost))")
     print("week:    \(Format.tokens(s.stats.weekTokens))  \(Format.cost(s.stats.weekCost))")
     print("session: \(Format.tokens(s.stats.sessionTokens))  \(Format.cost(s.stats.sessionCost))")
+    for project in s.stats.projects.prefix(5) {
+        print("  \(project.name.padding(toLength: min(32, max(project.name.count, 24)), withPad: " ", startingAt: 0))  \(Format.tokens(project.tokens))")
+    }
     if !s.stats.ok {
-        print("note:    ~/.claude/projects not readable")
+        print("note:    \(profile.projectsDirectory.path) not readable")
     }
 }
 
