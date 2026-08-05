@@ -5,6 +5,7 @@
 ![Swift](https://img.shields.io/badge/built%20with-Swift%205.9-f05138.svg)
 [![Homebrew](https://img.shields.io/badge/Homebrew-saeedkolivand%2Ftap-d97757.svg)](https://github.com/saeedkolivand/homebrew-tap)
 [![Site](https://img.shields.io/badge/site-claude--usage--mac.iamsaeed.dev-38bdf8.svg)](https://claude-usage-mac.iamsaeed.dev)
+[![Downloads](https://img.shields.io/github/downloads/saeedkolivand/claude-usage-mac/total.svg?color=blue)](../../releases)
 
 Claude Code usage in the macOS menu bar and as a desktop widget — session and
 weekly limit percentages, token counts, and estimated cost.
