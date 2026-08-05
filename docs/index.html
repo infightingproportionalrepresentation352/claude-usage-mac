@@ -192,16 +192,22 @@
     <!-- ponytail: unauthenticated API, 60 req/hr per visitor IP and only the
          first page of releases. Cache it server-side if either ever bites. -->
     <script>
-      fetch("https://api.github.com/repos/saeedkolivand/claude-usage-mac/releases")
-        .then((r) => r.json())
-        .then((releases) => {
-          const total = releases
+      const repo = "https://api.github.com/repos/saeedkolivand/claude-usage-mac";
+      Promise.all([
+        fetch(`${repo}/releases`).then((r) => r.json()),
+        fetch(repo).then((r) => r.json()),
+      ])
+        .then(([releases, meta]) => {
+          const downloads = releases
             .flatMap((r) => r.assets)
             .filter((a) => a.name.endsWith(".dmg"))
             .reduce((sum, a) => sum + a.download_count, 0);
-          if (total) {
-            document.getElementById("downloads").textContent =
-              ` ${total.toLocaleString()} downloads so far.`;
+          const stars = meta.stargazers_count;
+          const parts = [];
+          if (downloads) parts.push(`${downloads.toLocaleString()} downloads`);
+          if (stars) parts.push(`${stars.toLocaleString()} stars on GitHub`);
+          if (parts.length) {
+            document.getElementById("downloads").textContent = ` ${parts.join(", ")}.`;
           }
         })
         .catch(() => {});
