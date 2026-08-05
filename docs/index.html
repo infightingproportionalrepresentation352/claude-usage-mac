@@ -41,6 +41,18 @@
         <a class="nav__link nav__link--hide-sm" href="/setup">Setup guide</a>
         <a class="nav__link nav__link--hide-sm" href="/privacy">Privacy</a>
         <a class="nav__link" href="https://github.com/saeedkolivand/claude-usage-mac">GitHub</a>
+        <a
+          class="nav__stat"
+          id="stat-stars"
+          href="https://github.com/saeedkolivand/claude-usage-mac/stargazers"
+          hidden
+        ></a>
+        <a
+          class="nav__stat"
+          id="stat-downloads"
+          href="https://github.com/saeedkolivand/claude-usage-mac/releases"
+          hidden
+        ></a>
       </div>
     </header>
 
@@ -59,8 +71,7 @@
             <a class="btn btn--ghost" href="#what">What it shows</a>
           </div>
           <p class="hero__note">
-            Free and open source. No account, no telemetry, nothing to sign up
-            for.<span id="downloads"></span>
+            Free and open source. No account, no telemetry, nothing to sign up for.
           </p>
           <div class="hero__shot">
             <img
@@ -209,12 +220,15 @@
       fetch("/stats.json")
         .then((r) => r.json())
         .then(({ downloads, stars }) => {
-          const parts = [];
-          if (downloads) parts.push(`${downloads.toLocaleString()} downloads`);
-          if (stars) parts.push(`${stars.toLocaleString()} stars on GitHub`);
-          if (parts.length) {
-            document.getElementById("downloads").textContent = ` ${parts.join(", ")}.`;
-          }
+          const show = (id, glyph, n, label) => {
+            if (!n) return;
+            const el = document.getElementById(id);
+            el.textContent = `${glyph} ${n.toLocaleString()}`;
+            el.setAttribute("aria-label", `${n.toLocaleString()} ${label}`);
+            el.hidden = false;
+          };
+          show("stat-stars", "★", stars, "stars on GitHub");
+          show("stat-downloads", "↓", downloads, "downloads");
         })
         .catch(() => {});
     </script>

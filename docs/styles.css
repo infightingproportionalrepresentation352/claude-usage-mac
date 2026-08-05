@@ -124,6 +124,30 @@ img {
   text-decoration: none;
 }
 
+.nav__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: #f5f5f7;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* Author `display` beats the UA stylesheet, so [hidden] needs saying again. */
+.nav__stat[hidden] {
+  display: none;
+}
+
+.nav__stat:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
