@@ -178,31 +178,37 @@
       </section>
     </main>
 
-    <footer class="tile tile--dark">
-      <div class="tile__inner">
-        <p class="lead">
-          <a href="https://github.com/saeedkolivand/claude-usage-mac">Source</a> ·
-          <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">Issues</a> ·
-          <a href="https://github.com/saeedkolivand/claude-usage-mac/blob/main/LICENSE">MIT</a> ·
+    <footer class="footer">
+      <div class="footer__inner">
+        <nav class="footer__links">
+          <a href="https://github.com/saeedkolivand/claude-usage-mac">GitHub repository</a>
+          <a href="/setup">Setup guide</a>
+          <a href="/privacy">Privacy policy</a>
+          <a href="https://github.com/saeedkolivand/claude-usage-mac/issues">Support</a>
+          <a href="https://github.com/saeedkolivand/claude-usage-mac/blob/main/LICENSE"
+            >License (MIT)</a
+          >
           <a href="https://claude-usage.iamsaeed.dev">Stream Deck version</a>
-        </p>
+        </nav>
+        <div class="footer__fine">
+          <p>
+            Claude Usage is an independent, unofficial tool. It is not affiliated
+            with, endorsed by, or sponsored by Anthropic or Apple. "Claude" and
+            "Claude Code" are trademarks of Anthropic and are used only to
+            describe compatibility. The Anthropic usage endpoint it reads is
+            undocumented and may change without notice.
+          </p>
+          <p>© 2026 Saeed Kolivand · Released under the MIT License.</p>
+        </div>
       </div>
     </footer>
 
-    <!-- ponytail: unauthenticated API, 60 req/hr per visitor IP and only the
-         first page of releases. Cache it server-side if either ever bites. -->
+    <!-- stats.json is refreshed nightly by .github/workflows/stats.yml, so this
+         is a same-origin static file rather than a GitHub API call per visitor. -->
     <script>
-      const repo = "https://api.github.com/repos/saeedkolivand/claude-usage-mac";
-      Promise.all([
-        fetch(`${repo}/releases`).then((r) => r.json()),
-        fetch(repo).then((r) => r.json()),
-      ])
-        .then(([releases, meta]) => {
-          const downloads = releases
-            .flatMap((r) => r.assets)
-            .filter((a) => a.name.endsWith(".dmg"))
-            .reduce((sum, a) => sum + a.download_count, 0);
-          const stars = meta.stargazers_count;
+      fetch("/stats.json")
+        .then((r) => r.json())
+        .then(({ downloads, stars }) => {
           const parts = [];
           if (downloads) parts.push(`${downloads.toLocaleString()} downloads`);
           if (stars) parts.push(`${stars.toLocaleString()} stars on GitHub`);
