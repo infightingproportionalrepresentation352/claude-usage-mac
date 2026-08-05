@@ -138,11 +138,6 @@ img {
   white-space: nowrap;
 }
 
-/* Author `display` beats the UA stylesheet, so [hidden] needs saying again. */
-.nav__stat[hidden] {
-  display: none;
-}
-
 .nav__stat:hover {
   border-color: rgba(255, 255, 255, 0.5);
   text-decoration: none;

@@ -41,18 +41,6 @@
         <a class="nav__link nav__link--hide-sm" href="/setup">Setup guide</a>
         <a class="nav__link nav__link--hide-sm" href="/privacy">Privacy</a>
         <a class="nav__link" href="https://github.com/saeedkolivand/claude-usage-mac">GitHub</a>
-        <a
-          class="nav__stat"
-          id="stat-stars"
-          href="https://github.com/saeedkolivand/claude-usage-mac/stargazers"
-          hidden
-        ></a>
-        <a
-          class="nav__stat"
-          id="stat-downloads"
-          href="https://github.com/saeedkolivand/claude-usage-mac/releases"
-          hidden
-        ></a>
       </div>
     </header>
 
@@ -214,23 +202,6 @@
       </div>
     </footer>
 
-    <!-- stats.json is refreshed nightly by .github/workflows/stats.yml, so this
-         is a same-origin static file rather than a GitHub API call per visitor. -->
-    <script>
-      fetch("/stats.json")
-        .then((r) => r.json())
-        .then(({ downloads, stars }) => {
-          const show = (id, glyph, n, label) => {
-            if (!n) return;
-            const el = document.getElementById(id);
-            el.textContent = `${glyph} ${n.toLocaleString()}`;
-            el.setAttribute("aria-label", `${n.toLocaleString()} ${label}`);
-            el.hidden = false;
-          };
-          show("stat-stars", "★", stars, "stars on GitHub");
-          show("stat-downloads", "↓", downloads, "downloads");
-        })
-        .catch(() => {});
-    </script>
+    <script src="/stats.js"></script>
   </body>
 </html>
