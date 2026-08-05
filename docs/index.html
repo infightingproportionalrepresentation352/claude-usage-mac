@@ -59,7 +59,8 @@
             <a class="btn btn--ghost" href="#what">What it shows</a>
           </div>
           <p class="hero__note">
-            Free and open source. No account, no telemetry, nothing to sign up for.
+            Free and open source. No account, no telemetry, nothing to sign up
+            for.<span id="downloads"></span>
           </p>
           <div class="hero__shot">
             <img
@@ -187,5 +188,23 @@
         </p>
       </div>
     </footer>
+
+    <!-- ponytail: unauthenticated API, 60 req/hr per visitor IP and only the
+         first page of releases. Cache it server-side if either ever bites. -->
+    <script>
+      fetch("https://api.github.com/repos/saeedkolivand/claude-usage-mac/releases")
+        .then((r) => r.json())
+        .then((releases) => {
+          const total = releases
+            .flatMap((r) => r.assets)
+            .filter((a) => a.name.endsWith(".dmg"))
+            .reduce((sum, a) => sum + a.download_count, 0);
+          if (total) {
+            document.getElementById("downloads").textContent =
+              ` ${total.toLocaleString()} downloads so far.`;
+          }
+        })
+        .catch(() => {});
+    </script>
   </body>
 </html>
