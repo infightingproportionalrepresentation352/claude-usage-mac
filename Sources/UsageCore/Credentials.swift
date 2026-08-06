@@ -12,7 +12,6 @@ public struct Credentials: Sendable, Equatable {
 /// We never authenticate ourselves and never write credentials anywhere.
 public enum CredentialStore {
 
-    static let keychainAccount = "claude-code-user"
     static let keychainBase = "Claude Code-credentials"
 
     /// File first, Keychain second.
@@ -69,11 +68,16 @@ public enum CredentialStore {
     static func readKeychain(service: String, timeout: TimeInterval = 60) -> Credentials? {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        // ponytail: values over 2400B are stored chunked across accounts
-        // `claude-code-user#0`, `#1`, … Pinning `-a` means we return nil on those
-        // rather than parsing a base64 chunk as JSON. Reassemble if tokens ever
-        // outgrow 2400B.
-        task.arguments = ["find-generic-password", "-a", keychainAccount, "-w", "-s", service]
+        // Service only, no `-a`. Claude Code writes the account as
+        // `claude-code-user`, but items written by older versions use something
+        // else, and pinning the account broke the default profile in 0.3.7 — it
+        // is the oldest item on most machines. The service name is already the
+        // per-profile key, so matching on it alone is specific enough.
+        //
+        // ponytail: a value over 2400B is stored chunked across `<account>#0`,
+        // `#1`, … and this would return one base64 chunk, which `parse` rejects
+        // as non-JSON. Reassemble if tokens ever outgrow 2400B.
+        task.arguments = ["find-generic-password", "-w", "-s", service]
         let pipe = Pipe()
         task.standardOutput = pipe
         task.standardError = FileHandle.nullDevice

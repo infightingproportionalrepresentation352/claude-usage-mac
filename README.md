@@ -89,7 +89,8 @@ except the one authenticated GET above.
 Claude Code names that Keychain item after the config dir it was authenticated
 from: `Claude Code-credentials` for the default `~/.claude`, and
 `Claude Code-credentials-<first 8 hex of sha256(config dir)>` for anything
-relocated with `CLAUDE_CONFIG_DIR`. The account is always `claude-code-user`.
+relocated with `CLAUDE_CONFIG_DIR`. We match on the service name alone — the
+account differs between Claude Code versions.
 
 macOS asks once per item for permission to read it. "Always Allow" stops it
 asking again.
