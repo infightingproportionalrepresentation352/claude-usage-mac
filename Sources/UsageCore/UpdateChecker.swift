@@ -1,8 +1,37 @@
+import CryptoKit
 import Foundation
 
 public struct ReleaseInfo: Codable, Sendable, Equatable {
     public var version: String
     public var url: URL
+    /// The installable image and the checksum file published beside it. Both
+    /// optional: a release with no assets is still worth announcing, it just
+    /// can't be installed in place.
+    public var dmg: URL?
+    public var checksums: URL?
+}
+
+public enum Checksums {
+
+    /// Reads one entry out of `shasum -a 256` output, which is
+    /// `<64 hex chars><two spaces><filename>` per line.
+    ///
+    /// Splitting on whitespace means a filename containing a space would parse
+    /// as its first word. The release assets are named by the workflow and
+    /// never contain one, and a mismatch here fails closed — the install is
+    /// refused rather than run unverified.
+    public static func expected(for filename: String, in text: String) -> String? {
+        for line in text.split(whereSeparator: \.isNewline) {
+            let fields = line.split(separator: " ", omittingEmptySubsequences: true)
+            guard fields.count == 2, fields[1] == filename else { continue }
+            return fields[0].lowercased()
+        }
+        return nil
+    }
+
+    public static func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
 }
 
 /// Checks GitHub for a newer release and reports it. Deliberately not an
@@ -48,9 +77,20 @@ public actor UpdateChecker {
             return nil
         }
 
+        let assets = (root["assets"] as? [[String: Any]]) ?? []
+        func asset(_ matches: (String) -> Bool) -> URL? {
+            assets
+                .first { ($0["name"] as? String).map(matches) ?? false }
+                .flatMap { $0["browser_download_url"] as? String }
+                .flatMap(URL.init(string:))
+        }
+
         let latest = Self.normalize(tag)
         found = Self.isNewer(latest, than: Self.normalize(currentVersion))
-            ? ReleaseInfo(version: latest, url: page)
+            ? ReleaseInfo(version: latest,
+                          url: page,
+                          dmg: asset { $0.hasSuffix(".dmg") },
+                          checksums: asset { $0 == "SHA256SUMS.txt" })
             : nil
         return found
     }

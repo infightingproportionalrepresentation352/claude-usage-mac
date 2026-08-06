@@ -11,6 +11,11 @@ final class Poller: ObservableObject {
     @Published private(set) var update: ReleaseInfo?
     @Published private(set) var profiles: [Profile] = []
     @Published private(set) var lastUpdateCheck: Date?
+    @Published private(set) var updateState: UpdateState = .idle
+
+    /// Versions already tried this launch. Without it a release that fails to
+    /// install is retried on every poll for as long as the app stays open.
+    private var attempted: Set<String> = []
 
     @AppStorage(SettingsKey.warn) private var warn = 50.0
     @AppStorage(SettingsKey.critical) private var critical = 80.0
@@ -111,6 +116,28 @@ final class Poller: ObservableObject {
             update = await UpdateChecker.shared.check(
                 currentVersion: AppVersion.current, force: true)
             lastUpdateCheck = Date()
+            await installIfFound()
+        }
+    }
+
+    /// Installs whatever the last check found, then restarts into it.
+    ///
+    /// Gated on `autoCheckUpdates` and nothing else: turning checks off is the
+    /// opt-out, because an app that has already noticed a new version and then
+    /// waits to be told to fetch it is the behaviour this replaced.
+    private func installIfFound() async {
+        guard autoCheckUpdates, updateState == .idle,
+              let release = update, attempted.insert(release.version).inserted
+        else { return }
+        do {
+            try await Updater.install(release, over: Bundle.main.bundleURL) { step in
+                Task { @MainActor in self.updateState = .busy(step) }
+            }
+        } catch {
+            // Left on screen rather than logged away: the app is still running
+            // the old version, and the only person who can act on that is
+            // looking at this pane.
+            updateState = .failed(error.localizedDescription)
         }
     }
 
@@ -146,5 +173,6 @@ final class Poller: ObservableObject {
         // costs nothing.
         update = await UpdateChecker.shared.check(currentVersion: AppVersion.current)
         lastUpdateCheck = Date()
+        await installIfFound()
     }
 }

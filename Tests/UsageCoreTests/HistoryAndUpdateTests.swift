@@ -133,3 +133,30 @@ final class InstallSourceTests: XCTestCase {
         XCTAssertFalse(InstallSource.isHomebrewCask(paths: ["/nonexistent/Caskroom/claude-usage"]))
     }
 }
+
+final class ChecksumTests: XCTestCase {
+
+    private let sums = """
+    1b4147e848072037b984e875b0acf6c603f49f80132e700f975dc2614bffaae5  ClaudeUsage-0.3.5.dmg
+    9765c6ec68b5e4d643aed5f08a5ef4576fc1783444d72c1813e483a017702f98  ClaudeUsage-0.3.4.dmg
+    """
+
+    func testPicksTheLineForTheRequestedFile() {
+        XCTAssertEqual(Checksums.expected(for: "ClaudeUsage-0.3.4.dmg", in: sums),
+                       "9765c6ec68b5e4d643aed5f08a5ef4576fc1783444d72c1813e483a017702f98")
+    }
+
+    /// Fails closed: an unknown or malformed entry must read as "no checksum",
+    /// which the updater treats as a refusal rather than a pass.
+    func testUnknownOrMalformedEntriesYieldNothing() {
+        XCTAssertNil(Checksums.expected(for: "ClaudeUsage-9.9.9.dmg", in: sums))
+        XCTAssertNil(Checksums.expected(for: "a.dmg", in: "deadbeef"))
+        XCTAssertNil(Checksums.expected(for: "a.dmg", in: ""))
+    }
+
+    /// `printf 'claude' | shasum -a 256`
+    func testDigestMatchesShasum() {
+        XCTAssertEqual(Checksums.sha256(Data("claude".utf8)),
+                       "c857d09db23e6822e3600bc06ad8d58f92ed62bc8efd81c753f77048662cb97d")
+    }
+}

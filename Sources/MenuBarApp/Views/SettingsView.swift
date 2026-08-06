@@ -179,24 +179,27 @@ struct SettingsView: View {
                 // feature is invisible until the day an update happens to exist.
                 Text(updateStatus)
                     .font(.callout)
-                    .foregroundStyle(poller.update == nil ? .secondary : .primary)
+                    .foregroundStyle(statusColour)
                 Spacer()
                 Button("Check Now", action: poller.checkForUpdates)
+                    .disabled(isInstalling)
             }
             if let release = poller.update {
                 Link("Open release notes", destination: release.url)
                     .font(.callout)
             }
-            Toggle("Check automatically", isOn: $autoCheckUpdates)
+            // Named for what it now does. The same switch gates the install, so
+            // calling it "Check automatically" would hide half its effect.
+            Toggle("Check and install automatically", isOn: $autoCheckUpdates)
             if isHomebrewCask {
                 HStack {
-                    Text(Self.brewUpgrade)
+                    Text(Self.brewResync)
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                     Spacer()
                     Button("Copy") {
                         NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(Self.brewUpgrade, forType: .string)
+                        NSPasteboard.general.setString(Self.brewResync, forType: .string)
                     }
                 }
             }
@@ -208,19 +211,36 @@ struct SettingsView: View {
         }
     }
 
-    private static let brewUpgrade = "brew upgrade --cask claude-usage"
+    /// `--force` because by the time anyone runs this the app on disk is already
+    /// newer than the version brew believes it installed, and a plain upgrade
+    /// baulks at replacing a bundle it didn't put there.
+    private static let brewResync = "brew upgrade --cask claude-usage --force"
 
-    /// Naming both install routes and leaving the user to work out which they
-    /// are is the thing worth avoiding — a cask install that hand-installs a DMG
-    /// over itself desyncs Homebrew's record of what it put there.
     private var updateAdvice: String {
-        let checks = "Checks GitHub four times a day. Nothing is downloaded or installed"
-        return isHomebrewCask
-            ? "\(checks) — run the command above to upgrade."
-            : "\(checks) — download the new version from the release notes."
+        let base = "Checks GitHub four times a day, installs what it finds, and restarts."
+        guard isHomebrewCask else { return base }
+        return "\(base) Homebrew still records the version it installed — run the "
+            + "command above whenever you want its records to agree."
+    }
+
+    private var isInstalling: Bool {
+        if case .busy = poller.updateState { return true }
+        return false
+    }
+
+    private var statusColour: Color {
+        if case .failed = poller.updateState { return .red }
+        return poller.update == nil && !isInstalling ? .secondary : .primary
     }
 
     private var updateStatus: String {
+        // An install in flight outranks the release that started it — "0.4.0
+        // available" beside a progress line reads like two separate things.
+        switch poller.updateState {
+        case let .busy(step): return step
+        case let .failed(message): return message
+        case .idle: break
+        }
         if let release = poller.update {
             return "Version \(release.version) available"
         }
