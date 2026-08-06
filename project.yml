@@ -93,8 +93,10 @@ targets:
       - Sources/Widget/Views
       - Sources/MenuBarApp/Views
       # Settings renders live Poller state; App.swift stays out, its @main would
-      # collide with the test bundle's entry point.
+      # collide with the test bundle's entry point. Updater comes along because
+      # Poller publishes its UpdateState, not because anything renders it.
       - Sources/MenuBarApp/Poller.swift
+      - Sources/MenuBarApp/Updater.swift
       - Tests/SnapshotTests
     settings:
       base:
