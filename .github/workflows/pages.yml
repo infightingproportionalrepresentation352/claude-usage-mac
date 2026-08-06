@@ -1,0 +1,42 @@
+name: Pages
+
+# Replaces the implicit "pages build and deployment" workflow, which GitHub
+# generates for a branch source and which has no Run workflow button. Its deploy
+# step sits in a shared queue and aborts on timeout often enough to matter, and
+# the only recovery was `gh api -X POST .../pages/builds` from a terminal.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a deploy already in flight — a half-applied Pages deployment is
+# worse than a redundant one. Queued runs supersede each other.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # docs/ is hand-written static HTML with a CNAME and no Jekyll config, so
+      # it ships verbatim. Nothing to build.
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - id: deploy
+        uses: actions/deploy-pages@v5
