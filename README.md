@@ -82,12 +82,17 @@ Two sources, both already on your machine. Nothing is sent anywhere.
 | `api.anthropic.com/api/oauth/usage`, using the OAuth token Claude Code already stored | 5-hour and 7-day limit utilization, and when each resets |
 | `~/.claude/projects/**/*.jsonl` | today / this week / current session token counts and estimated cost |
 
-The token is read from the login Keychain (`Claude Code-credentials`), falling
-back to `<config dir>/.credentials.json`. We never log in, never write
-credentials, and never transmit anything except the one authenticated GET above.
+The token is read from `<config dir>/.credentials.json`, falling back to the login
+Keychain. We never log in, never write credentials, and never transmit anything
+except the one authenticated GET above.
 
-macOS asks once for permission to read that Keychain item. "Always Allow" stops
-it asking again.
+Claude Code names that Keychain item after the config dir it was authenticated
+from: `Claude Code-credentials` for the default `~/.claude`, and
+`Claude Code-credentials-<first 8 hex of sha256(config dir)>` for anything
+relocated with `CLAUDE_CONFIG_DIR`. The account is always `claude-code-user`.
+
+macOS asks once per item for permission to read it. "Always Allow" stops it
+asking again.
 
 ## Profiles
 
@@ -101,12 +106,18 @@ Pick the menu bar's profile in Settings; each widget picks its own. Every
 profile keeps its own cache and its own history file, so one account can never
 show another's numbers.
 
-**macOS caveat.** Claude Code keeps its token in the login Keychain under a
-single name with no per-account variant, so only the default profile can read a
-token from there. A second profile needs its own `.credentials.json` in its
-config folder. Without one it reports `no-token` — deliberately, rather than
-borrowing the default account's token and showing the wrong percentages. Tokens
-and cost still work either way, since those come from transcripts on disk.
+**macOS caveat.** The Keychain item's name is hashed from the *literal*
+`CLAUDE_CONFIG_DIR` string you exported — Claude Code does no path resolution, so
+`~/.claude-work`, `$HOME/.claude-work` and `/Users/you/.claude-work/` are three
+different items. We try the plausible spellings; if yours is unusual the profile
+reports `no-token`. Settings shows the name we look for, next to the folder, so
+you can check it against:
+
+```sh
+security dump-keychain | grep -o '"svce"<blob>="Claude Code[^"]*"' | sort -u
+```
+
+Tokens and cost still work either way, since those come from transcripts on disk.
 
 ## Architecture
 

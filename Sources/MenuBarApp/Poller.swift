@@ -88,7 +88,7 @@ final class Poller: ObservableObject {
     func select(_ profile: Profile) {
         selectedProfile = profile.id
         // Nothing stale must sit under a newly selected profile's name.
-        snapshot = monitors[profile.id] == nil ? nil : snapshot
+        snapshot = nil
         refreshNow()
     }
 

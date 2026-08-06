@@ -163,13 +163,20 @@ brew install --cask claude-usage</code></pre>
             <code>projects</code> directory.
           </p>
           <p>
-            <strong>One caveat on macOS.</strong> Claude Code stores its token in
-            the login Keychain under a single name, with no per-account variant,
-            so only your default profile can read a token from there. A second
-            profile needs its own <code>.credentials.json</code> inside its
-            config folder. Without one it reports <em>no token</em> rather than
-            borrowing the default account's token and showing you the wrong
-            percentages. Tokens and cost still work either way.
+            <strong>One caveat on macOS.</strong> Claude Code names each profile's
+            Keychain item after the config folder it was signed into:
+            <code>Claude Code-credentials</code> for the default
+            <code>~/.claude</code>, and
+            <code>Claude Code-credentials-&lt;8 hex&gt;</code> — a hash of the
+            folder path — for anything relocated with
+            <code>CLAUDE_CONFIG_DIR</code>. That hash is taken over the
+            <em>literal</em> string you exported, so
+            <code>~/.claude-work</code>, <code>$HOME/.claude-work</code> and
+            <code>/Users/you/.claude-work/</code> are three different items. The
+            app tries the plausible spellings and shows the one it looks for
+            beside <strong>Folder</strong> in Settings; if yours is unusual the
+            profile reports <em>no token</em>. Tokens and cost still work either
+            way, since those come from transcripts on disk.
           </p>
 
           <h3>Menu bar shows</h3>
@@ -214,9 +221,14 @@ brew install --cask claude-usage</code></pre>
 
           <h3>"Sign in with Claude Code"</h3>
           <p>
-            No usable token. Run <code>claude</code> once and sign in. If you use
-            a non-default profile, check it has its own
-            <code>.credentials.json</code> — see the profile caveat above.
+            No usable token. Run <code>claude</code> once and sign in. On a
+            non-default profile, compare the <strong>Keychain</strong> name in
+            Settings against what you actually have:
+          </p>
+          <pre><code>security dump-keychain | grep -o '"svce"&lt;blob&gt;="Claude Code[^"]*"' | sort -u</code></pre>
+          <p>
+            No match means the folder path was spelled differently when you
+            signed in — see the profile caveat above.
           </p>
 
           <h3>"No connection", or numbers marked outdated</h3>

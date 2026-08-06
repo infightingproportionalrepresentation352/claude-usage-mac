@@ -203,14 +203,42 @@ final class ProfileCredentialsTests: XCTestCase {
         XCTAssertFalse(creds.expired)
     }
 
-    func testNonDefaultProfileNeverFallsBackToTheKeychain() {
-        // There is one Keychain item with a fixed service name and no per-profile
-        // variant. Falling back would show another account's percentages under
-        // this profile's name — wrong, and invisibly so.
+    func testNonDefaultProfileNeverReadsTheDefaultsKeychainItem() {
+        // A relocated profile must never fall back to the bare service name:
+        // that would show another account's percentages under this profile's
+        // name — wrong, and invisibly so. Its hashed names are fine, because the
+        // hash *is* the per-profile key.
         let missing = FileManager.default.temporaryDirectory
             .appendingPathComponent("absent-\(UUID().uuidString)", isDirectory: true)
+        let services = CredentialStore.keychainServices(for: profile(missing, isDefault: false))
 
+        XCTAssertFalse(services.contains("Claude Code-credentials"))
+        XCTAssertTrue(services.allSatisfy { $0.hasPrefix("Claude Code-credentials-") })
         XCTAssertNil(CredentialStore.read(for: profile(missing, isDefault: false)).token)
+    }
+
+    /// Vectors computed against the algorithm read out of the Claude Code binary
+    /// (v2.1.223): `Claude Code-credentials-<sha256(configDir)[0..<8]>`, where the
+    /// hash is over the raw `CLAUDE_CONFIG_DIR` string, NFC-normalised.
+    func testKeychainServiceIsHashedPerConfigDir() {
+        let ruby = profile(URL(fileURLWithPath: "/Users/mohammad/.claude-ruby"), isDefault: false)
+        XCTAssertEqual(CredentialStore.keychainServices(for: ruby).first,
+                       "Claude Code-credentials-a7edb27d")
+        // A trailing slash is a different string, so it hashes differently — hence
+        // trying both spellings rather than picking one.
+        XCTAssertTrue(CredentialStore.keychainServices(for: ruby)
+            .contains("Claude Code-credentials-2fedf0e7"))
+    }
+
+    func testDefaultProfileTriesTheBareNameFirstThenHashedFallbacks() {
+        let dir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude", isDirectory: true)
+        let services = CredentialStore.keychainServices(for: profile(dir, isDefault: true))
+
+        XCTAssertEqual(services.first, "Claude Code-credentials")
+        // A user who exports CLAUDE_CONFIG_DIR at ~/.claude anyway gets a hashed
+        // item, so the tilde spelling must still be reachable.
+        XCTAssertTrue(services.contains("Claude Code-credentials-\(CredentialStore.sha8("~/.claude"))"))
     }
 }
 

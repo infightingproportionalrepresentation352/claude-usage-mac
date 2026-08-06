@@ -79,6 +79,14 @@ struct SettingsView: View {
                 if let active = poller.profiles.first(where: { $0.id == selectedProfile }) {
                     LabeledContent("Folder", value: active.configDir.path)
                         .font(.caption)
+                    // Claude Code names this item after the config dir it was
+                    // authenticated from. Showing it turns "Sign in with Claude
+                    // Code" on an account that *is* signed in into something the
+                    // user can actually check against their Keychain.
+                    LabeledContent("Keychain",
+                                   value: CredentialStore.keychainServices(for: active).first ?? "—")
+                        .font(.caption)
+                        .textSelection(.enabled)
                     if let organization = active.organization {
                         LabeledContent("Organization",
                                        value: [organization, active.plan].compactMap { $0 }.joined(separator: " · "))
