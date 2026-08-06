@@ -42,6 +42,12 @@ Or download the DMG from [Releases](../../releases), or build from source with
 
 The widget shows up in the widget gallery once the app has run at least once.
 
+Upgrading from 0.2 or earlier? Remove any placed widget and drag out a fresh
+one. Widgets became configurable in 0.3 and macOS cannot migrate a widget across
+that change — it refuses the timeline request rather than rendering. Widgets
+configured under 0.3.0 or 0.3.1 need their profile picked again for the same
+reason.
+
 Builds are ad-hoc signed, not notarized, so macOS quarantines them. The cask
 clears that for you; if you install the DMG by hand, run:
 

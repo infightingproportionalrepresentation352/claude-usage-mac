@@ -111,6 +111,13 @@ struct UsageWidgetEntryView: View {
 
 struct UsageWidget: Widget {
     var body: some WidgetConfiguration {
+        // Frozen: neither the kind nor the configuration type can change again.
+        // This was a StaticConfiguration until 0.3, and every widget placed
+        // before then is permanently dead — WidgetKit answers its timeline
+        // request with "Intent configuration is required but was not provided"
+        // instead of rendering, and there is no supported migration. Parameter
+        // *types* are equally one-way: the 0.3.1 → 0.3.2 ProfileEntity → String
+        // change made old selections unreadable, so they silently came back nil.
         AppIntentConfiguration(kind: "com.saeedkolivand.claude-usage.widget",
                                intent: UsageConfigIntent.self,
                                provider: UsageProvider()) { entry in

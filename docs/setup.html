@@ -110,6 +110,17 @@ brew install --cask claude-usage</code></pre>
             Not showing up at all? Run <code>killall chronod</code> to make macOS
             rescan its widget extensions.
           </p>
+          <p>
+            <strong>Blank after updating from 0.2 or earlier?</strong> Remove the
+            widget and drag out a fresh one. Widgets became configurable in 0.3,
+            and macOS cannot migrate an already-placed widget across that change
+            — it fails the timeline request outright
+            (<code>Intent configuration is required but was not provided</code>).
+            A widget configured under 0.3.0 or 0.3.1 likewise needs its profile
+            picked again; the stored selection changed format in 0.3.2 and an old
+            one reads back as unset, so the widget quietly shows the default
+            account.
+          </p>
 
           <h2>Configure a widget</h2>
           <p>

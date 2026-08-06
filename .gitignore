@@ -12,3 +12,7 @@ Sources/**/*.entitlements
 
 # Rendered by the snapshot tests
 snapshots/
+
+.mcp.json
+graphify-out/
+.codegraph/
