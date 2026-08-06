@@ -20,6 +20,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.menuBarMetric) private var menuBarMetric = "session"
     @AppStorage(SettingsKey.selectedProfile) private var selectedProfile = ""
     @AppStorage(SettingsKey.autoCheckUpdates) private var autoCheckUpdates = true
+    /// Read once when the view is first built rather than on every redraw — an
+    /// install cannot change source while the app is running.
+    @State private var isHomebrewCask = InstallSource.isHomebrewCask()
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var launchError: String?
     @State private var extraPaths = ProfileStore.savedExtraPaths()
@@ -185,12 +188,36 @@ struct SettingsView: View {
                     .font(.callout)
             }
             Toggle("Check automatically", isOn: $autoCheckUpdates)
-            Text("Checks GitHub four times a day. Nothing is downloaded or installed — use `brew upgrade --cask claude-usage`, or the link above.")
+            if isHomebrewCask {
+                HStack {
+                    Text(Self.brewUpgrade)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                    Spacer()
+                    Button("Copy") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(Self.brewUpgrade, forType: .string)
+                    }
+                }
+            }
+            Text(updateAdvice)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         } header: {
             Text("Updates")
         }
+    }
+
+    private static let brewUpgrade = "brew upgrade --cask claude-usage"
+
+    /// Naming both install routes and leaving the user to work out which they
+    /// are is the thing worth avoiding — a cask install that hand-installs a DMG
+    /// over itself desyncs Homebrew's record of what it put there.
+    private var updateAdvice: String {
+        let checks = "Checks GitHub four times a day. Nothing is downloaded or installed"
+        return isHomebrewCask
+            ? "\(checks) — run the command above to upgrade."
+            : "\(checks) — download the new version from the release notes."
     }
 
     private var updateStatus: String {

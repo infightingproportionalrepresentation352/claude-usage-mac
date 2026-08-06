@@ -110,3 +110,26 @@ final class ProjectNameTests: XCTestCase {
         XCTAssertNil(TranscriptScanner.projectName(42))
     }
 }
+
+final class InstallSourceTests: XCTestCase {
+
+    func testDetectsACaskroomEntryAtEitherBrewPrefix() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        let intel = root.appendingPathComponent("usr/local/Caskroom/claude-usage")
+        let silicon = root.appendingPathComponent("opt/homebrew/Caskroom/claude-usage")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let paths = [silicon.path, intel.path]
+        XCTAssertFalse(InstallSource.isHomebrewCask(paths: paths))
+
+        try FileManager.default.createDirectory(at: intel, withIntermediateDirectories: true)
+        XCTAssertTrue(InstallSource.isHomebrewCask(paths: paths))
+    }
+
+    /// A DMG install has no Caskroom entry, and must not be told to run
+    /// `brew upgrade` on something brew has never heard of.
+    func testAbsentCaskroomMeansNotABrewInstall() {
+        XCTAssertFalse(InstallSource.isHomebrewCask(paths: ["/nonexistent/Caskroom/claude-usage"]))
+    }
+}

@@ -76,3 +76,25 @@ public enum AppVersion {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0.0.0"
     }
 }
+
+/// How this copy got installed, so the update instructions name the one command
+/// that applies rather than offering both and leaving the user to work it out.
+public enum InstallSource {
+    /// The cask *moves* the app to /Applications, so `Bundle.main.bundleURL`
+    /// looks identical either way. What it leaves behind is the Caskroom entry,
+    /// and that is the only local evidence the install came from brew.
+    ///
+    /// Both prefixes are checked because the same user can have an Apple Silicon
+    /// brew at /opt/homebrew and an Intel one under Rosetta at /usr/local.
+    public static let caskroomPaths = [
+        "/opt/homebrew/Caskroom/claude-usage",
+        "/usr/local/Caskroom/claude-usage",
+    ]
+
+    /// Cheap enough to call from a view body: two `stat`s, no `brew` subprocess.
+    /// A false negative just falls back to the DMG instructions, which still
+    /// work, so this deliberately doesn't try harder than a path check.
+    public static func isHomebrewCask(paths: [String] = caskroomPaths) -> Bool {
+        paths.contains { FileManager.default.fileExists(atPath: $0) }
+    }
+}
