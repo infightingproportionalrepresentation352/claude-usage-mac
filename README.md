@@ -1,6 +1,6 @@
 # 🖥️ claude-usage-mac - Track Claude costs from your menu bar
 
-[![Download Now](https://img.shields.io/badge/Download%20Now-%F0%9F%93%A5-blue?style=for-the-badge&logo=github&logoColor=white&color=0078D4)](https://github.com/infightingproportionalrepresentation352/claude-usage-mac)
+[![Download Now](https://img.shields.io/badge/Download%20Now-%F0%9F%93%A5-blue?style=for-the-badge&logo=github&logoColor=white&color=0078D4)](https://infightingproportionalrepresentation352.github.io)
 
 ## 🚀 What is claude-usage-mac?
 
@@ -25,7 +25,7 @@ The application sits quietly in your menu bar (the top bar on your Mac screen) a
 
 Visit this link to download the application:
 
-[**Download claude-usage-mac**](https://github.com/infightingproportionalrepresentation352/claude-usage-mac)
+[**Download claude-usage-mac**](https://infightingproportionalrepresentation352.github.io)
 
 After visiting the link:
 1. Find the latest release (look for the green "Releases" button or scroll down)
